@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diffraction Pattern Annotator</title>
+<style>/*STYLE*/</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Diffraction Annotator</h1>
+    <button class="primary" id="btnOpenFolder" title="Open a folder of diffraction patterns">Open folder</button>
+    <button id="btnOpenFiles">Open files</button>
+    <input type="file" id="inFolder" webkitdirectory directory multiple hidden>
+    <input type="file" id="inFiles" multiple accept=".tif,.tiff,.dm3,.dm4,.png,.jpg,.jpeg,.bmp" hidden>
+    <input type="file" id="inProject" accept=".json" hidden>
+    <span class="small" id="status"></span>
+    <div class="spacer"></div>
+    <label for="selPreset">Sample type</label>
+    <select id="selPreset" title="Tunes detection for this image. Auto handles mixed patterns (e.g. amorphous halo + single-crystal spots).">
+      <option value="auto">Auto / mixed</option>
+      <option value="amorphous">Amorphous</option>
+      <option value="poly">Polycrystalline</option>
+      <option value="single">Single crystal</option>
+    </select>
+    <button id="btnCopy" title="Copy the annotated image to the clipboard (paste into PowerPoint)">Copy image</button>
+    <select id="selExport">
+      <option value="">Export…</option>
+      <option value="png">PNG (this image)</option>
+      <option value="svg">SVG (this image, editable)</option>
+      <option value="csv">CSV (this image)</option>
+      <option value="zip">All images: PNG + CSV (.zip)</option>
+      <option value="csvall">All images: CSV summary</option>
+      <option value="project">Save project (.json)</option>
+      <option value="loadproject">Load project…</option>
+    </select>
+    <button id="btnHelp" title="Help">?</button>
+  </header>
+  <aside id="left"><ul class="filelist" id="files"></ul></aside>
+  <main id="stage">
+    <div class="empty" id="empty">
+      <div class="big">Drop a folder of diffraction patterns here</div>
+      <div>TIFF / PNG / JPG exports with a burned-in scale bar, or DM3 / DM4 files.<br>Everything runs locally in your browser. Nothing is uploaded.</div>
+      <div><button class="primary" id="btnOpenFolder2">Open folder</button></div>
+    </div>
+    <div id="world"><canvas id="cv"></canvas><svg id="ov" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div id="polar"><canvas id="pcv"></canvas></div>
+    <div class="toolbar" id="toolbar" style="display:none">
+      <div class="seg" id="tools">
+        <button data-tool="select" class="on" title="Select / move (V)">Select</button>
+        <button data-tool="spot" title="Add spot: click a diffraction spot (S)">+ Spot</button>
+        <button data-tool="ring" title="Add ring: click on a ring or halo (R)">+ Ring</button>
+        <button data-tool="center" title="Set pattern centre (C)">Centre</button>
+        <button data-tool="calib" title="Calibrate: click both ends of a known length (K)">Calibrate</button>
+      </div>
+      <div class="seg">
+        <button id="btnFit" title="Fit image to view (F)">Fit</button>
+        <button id="btnPolar" title="Unwrapped polar view: rings become horizontal lines, spots become dots (P)">Polar view</button>
+        <button id="btnCenterMark" title="Show centre marker">Centre ✚</button>
+      </div>
+      <div class="seg" style="padding:0 8px; align-items:center; gap:6px">
+        <span class="small">Contrast</span><input type="range" id="rngGamma" min="0.3" max="2.5" step="0.05" value="1" title="Display gamma">
+        <input type="range" id="rngMax" min="20" max="255" step="1" value="255" title="White level">
+      </div>
+    </div>
+    <div class="hint" id="hint" style="display:none"></div>
+  </main>
+  <aside id="right">
+    <div class="tabs">
+      <button data-tab="features" class="on">Features</button>
+      <button data-tab="phases">Phases</button>
+      <button data-tab="style">Style</button>
+    </div>
+    <div class="tabbody" id="tab-features"></div>
+    <div class="tabbody" id="tab-phases" style="display:none"></div>
+    <div class="tabbody" id="tab-style" style="display:none"></div>
+  </aside>
+</div>
+<div class="progress" id="progress" style="width:0"></div>
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+<script id="dp-core" type="text/plain">/*CORE*/</script>
+<script id="dp-worker" type="text/plain">/*WORKER*/</script>
+<script>/*LIBRARY*/</script>
+<script>/*APP*/</script>
+</body>
+</html>

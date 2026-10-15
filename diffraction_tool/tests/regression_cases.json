@@ -1,0 +1,146 @@
+{
+ "centers": [
+  {
+   "file": "data/250304_HC_cryo_air_free_RT_to_cryo_0.04V_newEL/250203_HC_cryo_0.03V_newEL_0026.tif",
+   "center": [
+    2013,
+    2104
+   ],
+   "tol": 25
+  },
+  {
+   "file": "data/250304_HC_cryo_air_free_RT_to_cryo_0.04V_newEL/250203_HC_cryo_0.03V_newEL_0020.tif",
+   "center": [
+    1912,
+    2060
+   ],
+   "tol": 25
+  },
+  {
+   "file": "data/250129_HC_cryo_air_free_RT_to_cryo_0.01V/Sample_0055.tif",
+   "center": [
+    1831,
+    1779
+   ],
+   "tol": 25
+  },
+  {
+   "file": "data/250205_HC_cryo_air_free_RT_to_cryo_0.01V_newEL/bare-test-10secexposure_OneView_600X_baretest-heatup-cooldown_0065.tif",
+   "center": [
+    2129,
+    1819
+   ],
+   "tol": 25
+  },
+  {
+   "file": "data/241218_HC_cryo_air_free_RT_to_cryo_0.01V/241218_HC_0.01V_cryo2RT2cryo_0109.tif",
+   "center": [
+    2021,
+    1996
+   ],
+   "tol": 25
+  },
+  {
+   "file": "data/250303_HC_cryo_air_free_RT_to_cryo_0.05V_newEL/250203_HC_cryo_0.05V_newEL_0003.tif",
+   "center": [
+    1000,
+    984
+   ],
+   "tol": 25
+  },
+  {
+   "file": "data/250704_HC_cryo_air_free_RT_to_cryo_0.03V_newEL_baked_salt_small_particles/250704_0030.tif",
+   "center": [
+    2060,
+    1987
+   ],
+   "tol": 25
+  },
+  {
+   "file": "data/241204_HC_cryo_air_free_RT_to_cryo_0.01V/241204_HC_RT2Cryo_0008.tif",
+   "center": [
+    2165,
+    1797
+   ],
+   "tol": 30
+  },
+  {
+   "file": "data/250408_HC_cryo_air_free_RT_to_cryo_0.01V_newEL/250408_HC_Na_0.01V_0008.tif",
+   "center": [
+    2000,
+    1960
+   ],
+   "tol": 40
+  },
+  {
+   "file": "data/260615_HC_N_Na_10mV_no_rest/260616_0081.tif",
+   "center": [
+    2207,
+    1833
+   ],
+   "tol": 40
+  },
+  {
+   "file": "data/241218_HC_cryo_air_free_RT_to_cryo_0.01V/241218_HC_0.01V_cryo2RT2cryo_0009.tif",
+   "center": [
+    2123,
+    1903
+   ],
+   "tol": 40
+  },
+  {
+   "file": "data/241210_HC_cryo_air_free_RT_to_cryo_0.01V/241210_HC_RT2Cryo_0023.tif",
+   "center": [
+    2002,
+    2117
+   ],
+   "tol": 40
+  },
+  {
+   "file": "data/241218_HC_cryo_air_free_RT_to_cryo_0.01V/241218_HC_0.01V_cryo2RT2cryo_0006.tif",
+   "center": [
+    2060,
+    1868
+   ],
+   "tol": 40
+  },
+  {
+   "file": "data/250304_HC_cryo_air_free_RT_to_cryo_0.04V_newEL/TEM (21)/250203_HC_cryo_0.03V_newEL_0015.tif",
+   "center": [
+    1939,
+    2088
+   ],
+   "tol": 40
+  },
+  {
+   "file": "data/241106_HC_sodiated_cryo_0.01V/TEM (22)/241106_HC_sodiated_cryo_0.01V_0073.tif",
+   "center": [
+    2043,
+    1828
+   ],
+   "tol": 40
+  },
+  {
+   "file": "data/241122_HC_cryo_air_free_RT_to_cryo/241122_HC_cryo_air_free_RT_to_cryo_0092.tif",
+   "center": [
+    1990,
+    1933
+   ],
+   "tol": 40
+  }
+ ],
+ "bars": {
+  "files": [
+   "260724_HC_G300_10mV/TEM (12)/HC_G300_10mV_0013.tif",
+   "data/241122_HC_cryo_air_free_RT_to_cryo/TEM (31)/241122_HC_cryo_air_free_RT_to_cryo_0063.tif",
+   "data/241218_HC_cryo_air_free_RT_to_cryo_0.01V/241218_HC_0.01V_cryo2RT2cryo_0003.tif",
+   "data/250129_HC_cryo_air_free_RT_to_cryo_0.01V/Sample_0025.tif",
+   "data/250219_HC_cryo_air_free_RT_to_cryo_0.01V_newEL_10daysrest/TEM (57)/250219_HC_RT2Cryo_newEL_0004.tif",
+   "data/250303_HC_cryo_air_free_RT_to_cryo_0.05V_newEL/TEM (17)/250203_HC_cryo_0.05V_newEL_0056.tif",
+   "data/250305_HC_cryo_air_free_RT_to_cryo_0.05V_newEL/250305_HC_Na_0.03V_0014.tif",
+   "data/250703_HC_cryo_air_free_RT_to_cryo_0.03V_newEL_baked_salt_small_particles/250703_HC_Na_30mV_0015.tif",
+   "data/260430_Na_10mV_cryo/260430_Na_HC_10mV_0012.tif",
+   "data/260615_HC_N_Na_10mV_no_rest/260616_0153.tif"
+  ]
+ }
+}
