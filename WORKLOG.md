@@ -2,7 +2,7 @@
 
 A single-file web app that measures and labels electron diffraction patterns (spots, rings, amorphous halos), matches d-spacings against Materials Project phases, and exports annotated figures in the style of the lab's slides.
 
-- **Location:** `tem_ai_automation/diffraction_tool/`
+- **Location:** https://github.com/chadmserrao/diffraction_analysis (until 2026-10-14: `tem_ai_automation/diffraction_tool/`)
 - **Deliverable:** `dist/diffraction_annotator.html` (about 10 MB, self-contained, runs locally in the browser)
 
 ---
@@ -167,6 +167,35 @@ The defaults deviate from the annotation style in `250606_group_presentation.ppt
 5. {100} and {110} get separate colours and lines. The slides sometimes group them in one colour or one line.
 6. Halo tolerance is too loose, which allowed a 13%-off pseudo-graphite label despite the known Na {200} / pseudo-graphite {100} coincidence.
 
+## 2026-10-14: Own repository
+
+- The tool moved out of `tem_ai_automation/diffraction_tool/` into its own repository, `chadmserrao/diffraction_analysis`, with the files at the top level.
+- `PROMPT.md` added: the original request of 2026-09-26, word for word.
+
+## 2026-10-14: Plan review
+
+- Peer review by Daniel Cudzich (EE292M round 2, capstone), saved as `20261014_dcudzich_cmserrao.md`. Score 5 of 5.
+- Findings:
+  1. Milestones are stream-of-consciousness; itemise them.
+  2. Units are under-specified.
+  3. The check against a human analysis in ImageJ was not formally stated.
+
+## 2026-10-19: Revisions after the review
+
+All three findings were accepted; none were pushed back on.
+
+- **`PROMPT.md`** rewritten as a structured spec. The original wording is kept as an appendix. Sections:
+  - users and the decision the tool serves;
+  - data in;
+  - data out with units (d = 1/g; g is half the spot-to-spot distance for a pair);
+  - method;
+  - milestones M1–M6 (M1–M5 done, M6 = slide conventions, open);
+  - five acceptance checks;
+  - trust limits.
+- **Acceptance checks:** regression tests (passing), synthetic pattern (passing), calibration (passing), Au standard (failing: {111} missed), and a hand comparison in ImageJ on 10 patterns covering every feature type, within 2% on d and with the same phase (not yet done).
+- **`README.md`:** three-sentence summary at the top, a response to the review, Units and Verifying results sections, and the regression command fixed for the flat layout.
+- Pushed on branch `plan-review-revisions`, for a pull request into `main`.
+
 ---
 
 ## Open items
@@ -177,13 +206,16 @@ The defaults deviate from the annotation style in `250606_group_presentation.ppt
 - [ ] Reduce legend clutter on busy single-crystal patterns, e.g. hide unassigned features by default.
 - [ ] Test opening `dist/` directly from disk (file://). The preview browser could not open local files.
 - [ ] Consider regenerating the Materials Project API key, since it was pasted in chat.
+- [ ] Run the hand comparison: measure 10 patterns in ImageJ, one or more of each feature type plus the Au standard; d within 2% (PROMPT.md, check 5).
+- [ ] Update the old `diffraction_tool/` paths in `tests/regression.js`, `tests/check_crystal.js`, and `tools/build_library.py`.
 
 ## How to rebuild and test
 
+From the repository root:
+
 ```bash
-cd diffraction_tool
 python3 tools/build_library.py              # refresh library (needs MP key in .env)
 node tools/precompute_reflections.js 0.07   # precompute reflections
 python3 build.py                            # bundle into dist/
-cd .. && node diffraction_tool/tests/regression.js
+node tests/regression.js                    # run from a folder that holds the lab data/
 ```
