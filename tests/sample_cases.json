@@ -1,0 +1,9 @@
+{
+  "centers": [
+    { "file": "samples/250704_0030.tif", "center": [2060, 1987], "tol": 25, "bar": 5 },
+    { "file": "samples/250203_HC_cryo_0.05V_newEL_0045.tif", "bar": 5 },
+    { "file": "samples/250203_HC_cryo_0.05V_newEL_0003.tif", "center": [1000, 984], "tol": 25, "bar": 5 },
+    { "file": "samples/241122_HC_cryo_air_free_RT_to_cryo_0092.tif", "center": [1990, 1933], "tol": 40, "bar": 5 },
+    { "file": "samples/bare-test-10secexposure_OneView_600X_baretest-heatup-cooldown_0065.tif", "center": [2129, 1819], "tol": 25, "bar": 10 }
+  ]
+}
