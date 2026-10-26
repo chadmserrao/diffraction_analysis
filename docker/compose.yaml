@@ -1,0 +1,32 @@
+# Run through the Makefile only; it sets COMPOSE_PROJECT_NAME and the user IDs.
+x-work: &work
+  user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+  working_dir: /work
+  volumes:
+    - ..:/work
+  environment:
+    HOME: /tmp/home
+  init: true
+
+services:
+  app:
+    <<: *work
+    build:
+      context: .
+    image: ${COMPOSE_PROJECT_NAME}-app
+
+  # The Diffraction Annotator (`make up`), published on 127.0.0.1 only.
+  # serve.py reads the optional Materials Project key from .env in the project folder.
+  annotator:
+    <<: *work
+    image: ${COMPOSE_PROJECT_NAME}-app
+    pull_policy: never
+    command: ["python", "serve.py", "--host", "0.0.0.0", "--port", "8765", "--no-browser", "--data", "samples"]
+    ports:
+      - "127.0.0.1:8765:8765"
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/')"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
