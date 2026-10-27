@@ -1,16 +1,32 @@
 # Diffraction Annotator
 
-Diffraction Annotator turns a folder of TEM selected-area electron diffraction patterns into measured, labelled figures, replacing hand measurement in ImageJ and hand annotation in PowerPoint. For each pattern it calibrates from the scale bar or DM metadata, finds the centre, classifies every spot, ring and amorphous halo, and reports its d-spacing in nm with the best-matching Materials Project phase and {hkl}. Results are deterministic and are accepted only after they match the hand measurements in ImageJ within 2% on 10 patterns covering every feature type.
+**For materials scientists who take electron diffraction patterns on a transmission electron microscope (TEM) and need to know which crystal phases are in their sample.** Diffraction Annotator turns a folder of those patterns into measured, labelled figures. It replaces measuring each pattern by hand in ImageJ and labelling it by hand in PowerPoint.
 
-A single-file web app that measures and labels electron diffraction patterns. It finds spots, rings, and amorphous halos, measures their d-spacings, suggests phases from the Materials Project, and exports publication-ready annotated images.
+For each pattern, it reads the calibration from the scale bar or the DM file metadata and finds the centre. It then classifies every spot, ring and amorphous halo and reports its d-spacing in nm, with the best-matching Materials Project phase and {hkl}. The result is a figure ready for a paper or a group meeting, plus a CSV of every measurement.
 
-Everything runs locally in the browser. No image data leaves the computer.
+It is a single-file web app. Everything runs locally in the browser, and no image data leaves the computer. Results are deterministic. They count as correct only once they match hand measurements in ImageJ within 2% on 10 patterns covering every feature type (see [Verifying results](#verifying-results)).
 
 The requirements, milestones, and acceptance checks are in [PROMPT.md](PROMPT.md). The development history and open items are in [WORKLOG.md](WORKLOG.md).
 
+## Quick start
+
+You need Docker (Docker Desktop on a Mac), Make and git. Nothing else is installed on your computer; everything runs in a small container (Python and Node only).
+
+```sh
+git clone https://github.com/chadmserrao/diffraction_analysis.git
+cd diffraction_analysis
+make up           # build the container and start the app
+```
+
+Open <http://127.0.0.1:8765/>, click **Open folder** and choose the `samples` folder: five patterns, one or more of each feature type, described in [samples/README.md](samples/README.md). The app is only reachable from your own machine. `make down` stops it.
+
+`make help` lists every command. `make verify` checks that everything works: a syntax check, the crystallography checks, the tests on the sample patterns, and a smoke test of the running app.
+
+Without Docker, open `dist/diffraction_annotator.html` directly in a browser; everything except the live Materials Project search works the same.
+
 ## Use it
 
-1. Open `dist/diffraction_annotator.html` in Chrome, Edge, Safari, or Firefox. You can also share that one file with the lab.
+1. Open the app (`make up`, above), or open `dist/diffraction_annotator.html` in Chrome, Edge, Safari, or Firefox. You can also share that one file with the lab.
 2. Drag a folder of patterns onto the page, or click **Open folder**.
 3. Go through the images with the arrow keys. Check the chips next to each file, adjust anything that looks wrong, and export.
 
@@ -31,6 +47,38 @@ The following file types are supported:
 
 The results are deterministic: the same file always gives the same result. Run the regression tests to check.
 
+## How the code is organized
+
+Each module in `src/` has one job. Every pattern passes through the same pipeline, in this order:
+
+```text
+file ──► worker.js ──► tiff.js / dm.js ──► imageproc.js ──► app.js ──► crystal.js ──► app.js ──► export (zip.js)
+         decode         read pixels         scale bar,       calibrate   match          edit,       PNG / SVG /
+                                            centre, features to 1/nm     phases         style       CSV / ZIP
+```
+
+| Module | Its one job | Its interface: what goes in → what comes out |
+|---|---|---|
+| `tiff.js` | Read TIFF files | `DP.readTIFF(buffer)` → `{width, height, gray, bits}` |
+| `dm.js` | Read Gatan DM3/DM4 files | `DP.readDM(buffer)` → `{width, height, gray, calibration, meta}` |
+| `ocr_templates.js` | Digit shapes for reading scale-bar labels | data only, used by `detectScaleBar` |
+| `imageproc.js` | Find the scale bar, the centre and every feature, in pixels | `DP.detectScaleBar(gray, W, H)` → scale bar; `DP.analyze(gray, W, H, opts)` → `{center, features[], profile}` |
+| `worker.js` | Run decode and analysis off the UI thread, one image per message | message in `{name, buffer, opts}` → message out `{sb, dmCal, an, display, thumb}` |
+| `crystal.js` | Crystallography: reflections and phase matching | `DP.crystal.matchPhases(features, phases, {tol})` → ranked phases with {hkl} |
+| `library_data.js`, `library_refl.js` | The built-in Materials Project library | data only |
+| `zip.js` | Write a ZIP for batch export | `DP.makeZip([{name, data}])` → bytes |
+| `app.js` | The UI: calibration, display, editing, styling, export | the only module that holds state |
+
+Design patterns used:
+
+- **One narrow interface per module.** Each module is a self-contained function that adds only its public functions to one shared namespace, `DP`. Nothing else is shared between modules.
+- **Plain data between steps.** Modules pass plain objects and typed arrays (`gray`, `features[]`), never UI objects. That is why the same analysis runs in the browser, in the Web Worker and in the Node tests.
+- **Worker pool.** `app.js` sends each image to a pool of Web Workers, so a folder of hundreds of patterns is analysed without freezing the page.
+- **One state object.** All of the UI's state lives in a single object `S` in `app.js`. Only `app.js` changes it, and **Save project** writes it to JSON.
+- **Single-file build.** `build.py` bundles every module into `dist/diffraction_annotator.html`, so the whole tool is one file you can share with the lab.
+
+To change how a step works, edit that step's module and nothing else. For example, phase ranking is only in `crystal.js`, and scale-bar reading is only in `imageproc.js` with `ocr_templates.js`.
+
 ## Choosing phases
 
 Open **Phases → Choose elements…** and pick what could be in the sample. Only phases made from those elements are searched.
@@ -48,13 +96,9 @@ Star (★) the phases you expect, e.g. bcc Na. They win ties.
 
 ## Live Materials Project search (optional)
 
-Browsers cannot call the Materials Project API directly. To search it live, for elements or systems beyond the built-in library, run the helper:
+Browsers cannot call the Materials Project API directly. To search it live, for elements or systems beyond the built-in library, use the helper `serve.py`, which `make up` already runs. Without Docker, run it with `python3 serve.py`.
 
-```bash
-python3 serve.py
-```
-
-It opens the app at http://127.0.0.1:8765. It reads the API key from `MP_API_KEY` or from a `.env` file next to `serve.py` containing a line `MP_API_KEY=...`. Each lab member should use their own key and must never share the `.env` file.
+It serves the app at http://127.0.0.1:8765. It reads the API key from `MP_API_KEY` or from a `.env` file next to `serve.py` containing a line `MP_API_KEY=...` (copy `.env.example` to `.env`). Each lab member should use their own key and must never share the `.env` file; git ignores it.
 
 ## Style and export
 
@@ -72,6 +116,12 @@ Review by Daniel Cudzich, 2026-10-14 ([20261014_dcudzich_cmserrao.md](20261014_d
 - **Itemise the milestones:** accepted. [PROMPT.md](PROMPT.md) section 5 lists M1–M6, each with what "done" means and its status.
 - **Specify units:** accepted. [PROMPT.md](PROMPT.md) section 3 and the Units section below give the unit of every quantity, and settle d = 1/g.
 - **State the check formally:** accepted. [PROMPT.md](PROMPT.md) section 6 lists five checks, including a hand comparison in ImageJ on 10 patterns within 2% on d.
+
+## Response to the code review
+
+Review by Linda Lin, 2026-10-20 ([feedback/20261020_ldlin_cmserrao.md](feedback/20261020_ldlin_cmserrao.md)).
+
+- **Split the analysis into one file per function, tied together by `analyze`:** answered, not yet built in. `DP.analyze` remains the single entry point, and its steps (mask, centre, radial profile, peaks, spots, classification) are marked sections in `imageproc.js`. Those steps share working arrays, and the single-file build already keeps each module's interface narrow. Splitting them will be worth it once a step needs to change on its own; until then, the regression tests guard every step.
 
 ## Units
 
@@ -92,27 +142,23 @@ The full acceptance checks are in [PROMPT.md](PROMPT.md), section 6. In short:
 
 | Check | Pass condition | Status |
 |---|---|---|
-| Regression tests | 16 verified centres within tolerance; two runs identical | Passing |
+| Sample patterns (`make test`) | The 5 patterns in `samples/`: verified centres within tolerance, scale bars read, two runs identical | Passing |
+| Regression tests (`make lab-test`) | 16 verified centres within tolerance; two runs identical | Passing |
 | Synthetic pattern | Known d = 0.2222, 0.1538, 0.1081 nm returned exactly | Passing |
 | Calibration | All scale bars read; scale bar and DM4 agree within 0.1% | Passing (541/541, 0.08%) |
 | Au standard | Au {111}, {200}, {220}, {311} rings found and labelled Au | Failing: {111} missed |
 | Manual comparison | 10 patterns measured by hand in ImageJ, every feature type covered; tool's d within 2% and same phase | Not yet done |
 
-The regression test reads images at the paths in `tests/regression_cases.json`, relative to where it is run (`data/...`), so run it from a folder that holds the lab `data/` folder. Without the data it reports every case as skipped and exits with failure, because nothing was tested.
+`make test` runs from a fresh clone. The full regression test (`make lab-test`) reads images at the paths in `tests/regression_cases.json`, relative to the project folder (`data/...`), so it needs the lab's `data/` folder, which is not in this repository. Without the data it reports every case as skipped and exits with failure, because nothing was tested.
 
 ## Rebuild / maintain
 
 ```bash
+make dist                                       # bundle src/ into dist/diffraction_annotator.html
+make lab-test                                   # needs the lab data; see Verifying results
+make shell                                      # a shell in the container, for the two below
 python3 tools/build_library.py                  # refresh library from Materials Project (needs key)
 node tools/precompute_reflections.js 0.07       # precompute reflection lists
-python3 build.py                                # bundle src/ into dist/diffraction_annotator.html
-node tests/regression.js                         # needs the lab data; see Verifying results
 ```
 
-Source layout (`src/`):
-
-- `tiff.js`, `dm.js`: file readers
-- `imageproc.js`: scale bar, centre, rings, spots
-- `crystal.js`: structures, reflections, matching
-- `app.js`: UI
-- `worker.js`: background analysis
+The source layout and each module's interface are in [How the code is organized](#how-the-code-is-organized).

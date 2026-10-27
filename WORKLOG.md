@@ -196,6 +196,32 @@ All three findings were accepted; none were pushed back on.
 - **`README.md`:** three-sentence summary at the top, a response to the review, Units and Verifying results sections, and the regression command fixed for the flat layout.
 - Pushed on branch `plan-review-revisions`, for a pull request into `main`.
 
+## 2026-10-20: Code review
+
+- Peer review by Linda Lin (EE292M round 3, session 5a, capstone), merged as `feedback/20261020_ldlin_cmserrao.md` (PR #2). Score 5 of 5.
+- What she confirmed: the README says who the tool is for. The analysis is all in the backend, independent of the UI. The steps pass the same data format along one pipeline (import → image analysis → crystallography → export). The UI keeps one global state object.
+- Finding: `analyze` could be more modular, with each step in its own file and `analyze` tying them together, so changes are easier to track and troubleshoot.
+
+## 2026-10-26: Docker, sample patterns, fresh-clone tests
+
+- **`.gitignore`** added; `.DS_Store` no longer tracked.
+- **Docker through a Makefile:** a small image with Python and Node only (`docker/Dockerfile`, `docker/compose.yaml`).
+  - `make up` serves the app at http://127.0.0.1:8765/; `make down` stops it.
+  - `make verify` is the gate: lint (syntax check), `check` (crystal maths and phase library), `test` (sample patterns) and `smoke` (the page and a sample are served).
+  - Also `dist`, `lab-test`, `shell`, `clean` and `help`.
+- **`samples/`:** five SAED patterns from the lab data, one or more of each feature type: halo only, halo plus spots, the Au standard, spot pairs on rings, and faint halos from a OneView camera with a 10 1/nm bar. Described in `samples/README.md`.
+- **`tests/regression.js`** now takes a cases file, an optional expected scale-bar value, and cases without a verified centre. `tests/sample_cases.json` lists the samples, so `make test` runs from a fresh clone without the lab's `data/` folder.
+- **`README.md`:** Docker quick start, the sample patterns and the make targets.
+
+## 2026-10-26: Revisions after the code review
+
+- **`README.md`**, for the session 5b hand-in:
+  - **Message:** the opening now names the reader (materials scientists identifying crystal phases from TEM diffraction patterns) and what the tool replaces (ImageJ by hand, PowerPoint by hand).
+  - **Organization:** a new "How the code is organized" section shows the one pipeline (worker → readers → `imageproc.js` → `app.js` calibration → `crystal.js` → export) and gives each module's single job.
+  - **Interfaces and patterns:** the same section names each module's interface (e.g. `DP.analyze(gray, W, H, opts)` → `{center, features[], profile}`) and the patterns used: one namespace with narrow interfaces, plain data between steps, a worker pool, one state object, and a single-file build.
+  - **Response to the code review:** Linda's finding is answered in one line, with the reason it is not built in yet. `analyze` stays the single entry point with marked sections, because its steps share working arrays. The split will happen once a step needs to change on its own.
+- `main` merged into `feature/docker-samples` so the review file is linked; pushed and opened as PR #3 into `main`.
+
 ---
 
 ## Open items
@@ -207,15 +233,19 @@ All three findings were accepted; none were pushed back on.
 - [ ] Test opening `dist/` directly from disk (file://). The preview browser could not open local files.
 - [ ] Consider regenerating the Materials Project API key, since it was pasted in chat.
 - [ ] Run the hand comparison: measure 10 patterns in ImageJ, one or more of each feature type plus the Au standard; d within 2% (PROMPT.md, check 5).
-- [ ] Update the old `diffraction_tool/` paths in `tests/regression.js`, `tests/check_crystal.js`, and `tools/build_library.py`.
+- [ ] Update the old `diffraction_tool/` paths left in `tests/check_crystal.js` and `tools/build_library.py` (`tests/regression.js` is done).
+- [ ] Split `analyze` in `imageproc.js` into one file per step once a step needs to change on its own (code review, 2026-10-20).
+- [ ] Update the capstone repository on the course companion: it still lists `tem-search-twin`.
 
 ## How to rebuild and test
 
-From the repository root:
+From the repository root, everything in Docker:
 
 ```bash
-python3 tools/build_library.py              # refresh library (needs MP key in .env)
-node tools/precompute_reflections.js 0.07   # precompute reflections
-python3 build.py                            # bundle into dist/
-node tests/regression.js                    # run from a folder that holds the lab data/
+make verify     # lint, crystal checks, sample tests, smoke test
+make up         # the app at http://127.0.0.1:8765/
+make dist       # bundle src/ into dist/
+make lab-test   # the 16 regression cases; needs the lab's data/ folder
+make shell      # then: python3 tools/build_library.py (needs MP key in .env)
+                #       node tools/precompute_reflections.js 0.07
 ```
