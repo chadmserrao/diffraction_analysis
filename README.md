@@ -1,8 +1,12 @@
 # Diffraction Annotator
 
+Diffraction Annotator turns a folder of TEM selected-area electron diffraction patterns into measured, labelled figures, replacing hand measurement in ImageJ and hand annotation in PowerPoint. For each pattern it calibrates from the scale bar or DM metadata, finds the centre, classifies every spot, ring and amorphous halo, and reports its d-spacing in nm with the best-matching Materials Project phase and {hkl}. Results are deterministic and are accepted only after they match the hand measurements in ImageJ within 2% on 10 patterns covering every feature type.
+
 A single-file web app that measures and labels electron diffraction patterns. It finds spots, rings, and amorphous halos, measures their d-spacings, suggests phases from the Materials Project, and exports publication-ready annotated images.
 
 Everything runs locally in the browser. No image data leaves the computer.
+
+The requirements, milestones, and acceptance checks are in [PROMPT.md](PROMPT.md). The development history and open items are in [WORKLOG.md](WORKLOG.md).
 
 ## Use it
 
@@ -61,13 +65,48 @@ It opens the app at http://127.0.0.1:8765. It reads the API key from `MP_API_KEY
 - **Export region → Current view** crops to what you have zoomed into. **Scale bar → Draw a new one** adds a fresh bar when the original is cropped out.
 - **Save project** stores all edits. Loading it later restores them when the same folder is opened.
 
+## Response to the plan review
+
+Review by Daniel Cudzich, 2026-10-14 ([20261014_dcudzich_cmserrao.md](20261014_dcudzich_cmserrao.md)). All three findings were accepted; none were pushed back on.
+
+- **Itemise the milestones:** accepted. [PROMPT.md](PROMPT.md) section 5 lists M1–M6, each with what "done" means and its status.
+- **Specify units:** accepted. [PROMPT.md](PROMPT.md) section 3 and the Units section below give the unit of every quantity, and settle d = 1/g.
+- **State the check formally:** accepted. [PROMPT.md](PROMPT.md) section 6 lists five checks, including a hand comparison in ImageJ on 10 patterns within 2% on d.
+
+## Units
+
+| Quantity | Unit |
+|---|---|
+| Calibration | nm⁻¹ per pixel |
+| Centre and feature positions | px |
+| Distance from centre, g | nm⁻¹ |
+| d-spacing, d = 1/g | nm |
+| Mismatch to a reference phase | % of d |
+| Ring arc span and position | degrees |
+
+For a spot pair, g is half the spot-to-spot distance. The CSV export uses these units.
+
+## Verifying results
+
+The full acceptance checks are in [PROMPT.md](PROMPT.md), section 6. In short:
+
+| Check | Pass condition | Status |
+|---|---|---|
+| Regression tests | 16 verified centres within tolerance; two runs identical | Passing |
+| Synthetic pattern | Known d = 0.2222, 0.1538, 0.1081 nm returned exactly | Passing |
+| Calibration | All scale bars read; scale bar and DM4 agree within 0.1% | Passing (541/541, 0.08%) |
+| Au standard | Au {111}, {200}, {220}, {311} rings found and labelled Au | Failing: {111} missed |
+| Manual comparison | 10 patterns measured by hand in ImageJ, every feature type covered; tool's d within 2% and same phase | Not yet done |
+
+The regression test reads images at the paths in `tests/regression_cases.json`, relative to where it is run (`data/...`), so run it from a folder that holds the lab `data/` folder. Without the data it reports every case as skipped and exits with failure, because nothing was tested.
+
 ## Rebuild / maintain
 
 ```bash
 python3 tools/build_library.py                  # refresh library from Materials Project (needs key)
 node tools/precompute_reflections.js 0.07       # precompute reflection lists
 python3 build.py                                # bundle src/ into dist/diffraction_annotator.html
-cd .. && node diffraction_tool/tests/regression.js   # uses the lab data paths
+node tests/regression.js                         # needs the lab data; see Verifying results
 ```
 
 Source layout (`src/`):
