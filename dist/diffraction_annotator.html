@@ -2326,7 +2326,7 @@ self.onmessage = async (ev) => {
       <div class="row"><button id="btnSetCenter">Set centre by clicking</button><button id="btnReanalyse" title="Re-run detection with the current centre and sample type">Re-detect features</button><button id="btnAutoCenter">Auto centre</button></div></div>`;
     const feats = im.features.slice().sort((a, b) => a.r - b.r);
     h += `<div class="card"><h3>Features <span class="small" style="text-transform:none;letter-spacing:0">(${feats.length})</span></h3>
-      <div class="row"><button id="btnAutoAssign" title="Match all features against the selected phases">Auto-identify</button><button id="btnClearAssign">Clear labels</button><button id="btnHideWeak" title="Hide features with low signal">Hide weak</button></div>`;
+      <div class="row"><button id="btnAutoAssign" title="Match all features against the selected phases">Auto-identify</button><button id="btnClearAssign" title="Remove the phase labels, keep the marks">Clear labels</button><button id="btnClearMarks" title="Remove every spot and ring marked on this image (Re-detect features brings the automatic ones back)">Remove all marks</button><button id="btnHideWeak" title="Hide features with low signal">Hide weak</button></div>`;
     if (!feats.length) h += '<p class="small">No features detected. Use + Spot or + Ring on the image, or change the sample type.</p>';
     for (const f of feats) {
       const lb = featureLabel(f), st = labelStyle(lb);
@@ -2497,6 +2497,8 @@ self.onmessage = async (ev) => {
   }, { passive: false });
   stage.addEventListener('mousedown', (ev) => {
     const im = S.images[S.cur]; if (!im || im.status !== 'done' || S.polar) return;
+    // The toolbar (tools, contrast sliders) sits inside the stage: its clicks are not clicks on the image.
+    if (ev.target.closest && ev.target.closest('#toolbar, button, input, select, label')) return;
     const p = toImg(ev);
     if (ev.button === 1 || (ev.button === 0 && ev.altKey)) { drag = { kind: 'pan', sx: ev.clientX, sy: ev.clientY, vx: S.view.x, vy: S.view.y }; return; }
     if (ev.button !== 0) return;
@@ -2600,6 +2602,7 @@ self.onmessage = async (ev) => {
     if (id === 'btnAutoCenter') return reanalyse(im, null);
     if (id === 'btnAutoAssign') { im.features.forEach((f) => { if (f.assign) f.assign.auto = true; }); autoAssign(im); renderAll(); return; }
     if (id === 'btnClearAssign') { im.features.forEach((f) => { f.assign = null; f.custom = ''; }); renderAll(); return; }
+    if (id === 'btnClearMarks') { im.features = []; S.selFeat = null; renderAll(); return; }
     if (id === 'btnHideWeak') { const snrs = im.features.map((f) => f.snr || 0).sort((a, b) => a - b); const thr = Math.max(8, snrs[Math.floor(snrs.length * 0.3)] || 0); im.features.forEach((f) => { if (f.source !== 'manual' && (f.snr || 0) < thr && f.kind !== 'halo') f.visible = false; }); renderAll(); return; }
     if (t.dataset.act === 'del') { const fe = t.closest('.feat'); im.features = im.features.filter((f) => f.uid !== fe.dataset.f); renderAll(); return; }
     const fe = t.closest('.feat'); if (fe && !/SELECT|INPUT|BUTTON|OPTION/.test(t.tagName)) { S.selFeat = fe.dataset.f; renderAll(); }
