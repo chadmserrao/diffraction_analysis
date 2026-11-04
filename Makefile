@@ -39,6 +39,7 @@ check: ## Checks that need no images: crystal maths and the phase library
 
 test: ## Centre, scale bar and determinism on the patterns in samples/
 	$(RUN) node tests/regression.js tests/sample_cases.json
+	$(RUN) node tests/check_contract.js
 
 smoke: ## Start the app, check that the page and a sample are served, stop it
 	$(COMPOSE) up -d --wait annotator
