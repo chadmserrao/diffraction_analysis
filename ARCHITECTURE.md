@@ -62,6 +62,7 @@ assignments.
 | Contract | `tests/check_contract.js`: the fields above on a sample pattern | `make test` |
 | Integration | `tests/regression.js`: centre, scale bar and determinism on `samples/` | `make test` |
 | Smoke | the running app serves the page and a sample | `make smoke` |
+| Answer key | `tools/bench.js --check bench/key.json`: every result on `samples/` identical to the saved key | `make bench` |
 
 `make verify` runs all of them. The unit and contract tests were each shown
 failing on a planted defect (see `WORKLOG.md`, 2026-11-04). The integration test

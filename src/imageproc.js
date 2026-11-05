@@ -32,6 +32,21 @@
     const r = Math.max(1, Math.ceil(3 * sigma)), k = new Float32Array(2 * r + 1);
     let s = 0; for (let i = -r; i <= r; i++) { k[i + r] = Math.exp(-i * i / (2 * sigma * sigma)); s += k[i + r]; }
     for (let i = 0; i < k.length; i++) k[i] /= s;
+    if (!horiz) {
+      // The vertical pass walks whole rows (fast in memory) instead of columns. Each pixel
+      // still sums the same terms in the same order, in a double, so the result is identical.
+      const acc = new Float64Array(W);
+      for (let i = 0; i < H; i++) {
+        acc.fill(0);
+        for (let t = -r; t <= r; t++) {
+          let ii = i + t; ii = ii < 0 ? 0 : ii >= H ? H - 1 : ii;
+          const row = ii * W, kt = k[t + r];
+          for (let x = 0; x < W; x++) acc[x] += src[row + x] * kt;
+        }
+        dst.set(acc, i * W);
+      }
+      return;
+    }
     const n = horiz ? W : H, m = horiz ? H : W, step = horiz ? 1 : W, lineStep = horiz ? W : 1;
     for (let j = 0; j < m; j++) {
       const base = j * lineStep;
@@ -44,6 +59,17 @@
     }
   }
   function boxPass(src, dst, W, H, r, horiz) {
+    if (!horiz) {
+      // Vertical pass row by row, one running sum per column, updated in the same order as
+      // the column-by-column loop, so the result is identical.
+      const acc = new Float64Array(W), inv = 1 / (2 * r + 1), last = (H - 1) * W;
+      for (let i = -r; i <= r; i++) { const row = (i < 0 ? 0 : i >= H ? H - 1 : i) * W; for (let x = 0; x < W; x++) acc[x] += src[row + x]; }
+      for (let i = 0; i < H; i++) {
+        const out = i * W, ai = i + r + 1, ri = i - r, add = ai >= H ? last : ai * W, sub = ri < 0 ? 0 : ri * W;
+        for (let x = 0; x < W; x++) { dst[out + x] = acc[x] * inv; acc[x] += src[add + x] - src[sub + x]; }
+      }
+      return;
+    }
     const n = horiz ? W : H, m = horiz ? H : W, step = horiz ? 1 : W, lineStep = horiz ? W : 1, inv = 1 / (2 * r + 1);
     for (let j = 0; j < m; j++) {
       const base = j * lineStep, last = base + (n - 1) * step;

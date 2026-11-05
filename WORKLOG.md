@@ -247,6 +247,16 @@ All three findings were accepted; none were pushed back on.
 - **`README.md`:** each finding answered in one line in "Response to the test reviews"; the contract test added to "Verifying results".
 - **Not verified:** the two UI fixes were not clicked through in a browser; the open-button behaviour was not reproduced.
 
+## 2026-11-04: Speed through insight (6b)
+
+- **Benchmark:** new `tools/bench.js` (`make bench`) times reading, scale bar and analysis on each sample, median of three runs with the spread. `--save` writes the answer key (every result), and `--check` compares against it.
+- **Profile:** analysis takes about 85% of the run. Inside it the blur's vertical pass was the largest single cost: it walked columns, jumping a row in memory per pixel.
+- **Change:** the vertical pass of `blur1d` and `boxPass` now walks rows, with one running sum per column and the same terms in the same order. On its own the blur is about 2× faster (host microbenchmark, 2048 × 2048).
+- **Measured (container, MacBook Air):** analysis 17.760 s → 15.451 s (1.15×), whole run 20.793 s → 18.202 s (1.14×), back to back. An earlier pair of runs gave 21.5 s → 17.5 s, so the container is noisy.
+- **Answer key:** `bench/key.json`, saved before the change. Identical after it. A planted `Math.fround` in the new blur failed `--check` on all five samples, then was restored.
+- **`make verify`:** green.
+- **Left as is:** `Math.hypot` in the ring fit (about 13%). A plain square root could change a last digit.
+
 ---
 
 ## Open items
