@@ -222,6 +222,31 @@ All three findings were accepted; none were pushed back on.
   - **Response to the code review:** Linda's finding is answered in one line, with the reason it is not built in yet. `analyze` stays the single entry point with marked sections, because its steps share working arrays. The split will happen once a step needs to change on its own.
 - `main` merged into `feature/docker-samples` so the review file is linked; pushed and opened as PR #3 into `main`.
 
+## 2026-10-27 and 2026-11-01: Test reviews
+
+- Peer reviews by Linda Lin (`feedback/20261027_ldlin_cmserrao.md`, PR #4) and Logan Russo (`feedback/20261101_lrusso3_cmserrao.md`, PR #5), EE292M round 4, session 6a, capstone. Both 5 of 5.
+- Linda's findings:
+  - there is no backend API;
+  - the front/back contract is implied, not written down;
+  - no test has been shown failing on a planted defect;
+  - "Clear labels" leaves the marks;
+  - the interface is busy;
+  - she suggested a tutorial, expected values in the sample tests, and colour grouping of the UI.
+- Logan's findings: contrast sliders also pan the image; "Calibrate by clicking…" then + Spot froze the page; the Open buttons failed (in the VS Code browser); "Best matches" could move up (optional).
+
+## 2026-11-04: Revisions after the test reviews
+
+- **Bugs fixed (`src/app.js`):**
+  - The toolbar sits inside the image area, so its clicks reached the image: dragging a contrast slider panned, and clicking + Spot during calibration was counted as a calibration point. The stage now ignores clicks on the toolbar and on any control.
+  - New **Remove all marks** button next to **Clear labels**.
+- **Contract written down:** new `ARCHITECTURE.md` lists every field `app.js` reads from the readers, the scale bar, `analyze`, the worker messages and `matchPhases`, with units.
+- **Contract test:** new `tests/check_contract.js`, run by `make test`, checks those fields on the Au standard sample, including that a spot pair's radius is half its spot-to-spot distance.
+- **Planted defects, each restored after the run:**
+  1. Pair radius not halved in `imageproc.js`: the sample tests still passed (ALL PASSED); the contract test failed (worst 773 px).
+  2. d = 1/g² instead of 1/g in `crystal.js`: `make check` failed 4 checks (Au and Na spacings, and the precomputed library).
+- **`README.md`:** each finding answered in one line in "Response to the test reviews"; the contract test added to "Verifying results".
+- **Not verified:** the two UI fixes were not clicked through in a browser; the open-button behaviour was not reproduced.
+
 ---
 
 ## Open items
@@ -236,6 +261,8 @@ All three findings were accepted; none were pushed back on.
 - [ ] Update the old `diffraction_tool/` paths left in `tests/check_crystal.js` and `tools/build_library.py` (`tests/regression.js` is done).
 - [ ] Split `analyze` in `imageproc.js` into one file per step once a step needs to change on its own (code review, 2026-10-20).
 - [ ] Update the capstone repository on the course companion: it still lists `tem-search-twin`.
+- [ ] Add expected d-spacings to `tests/sample_cases.json` once the ImageJ hand comparison is done (test review, Linda).
+- [ ] Group the side panels by colour, and add a short built-in walkthrough (test review, Linda).
 
 ## How to rebuild and test
 

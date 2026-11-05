@@ -121,7 +121,23 @@ Review by Daniel Cudzich, 2026-10-14 ([20261014_dcudzich_cmserrao.md](20261014_d
 
 Review by Linda Lin, 2026-10-20 ([feedback/20261020_ldlin_cmserrao.md](feedback/20261020_ldlin_cmserrao.md)).
 
-- **Split the analysis into one file per function, tied together by `analyze`:** answered, not yet built in. `DP.analyze` remains the single entry point, and its steps (mask, centre, radial profile, peaks, spots, classification) are marked sections in `imageproc.js`. Those steps share working arrays, and the single-file build already keeps each module's interface narrow. Splitting them will be worth it once a step needs to change on its own; until then, the regression tests guard every step.
+- **Split the analysis into one file per function, tied together by `analyze`:** answered, not yet built in. `DP.analyze` remains the single entry point, and its steps (mask, centre, radial profile, peaks, spots, classification) are marked sections in `imageproc.js`. Those steps share working arrays, and the single-file build already keeps each module's interface narrow. Splitting them will be worth it once a step needs to change on its own; until then, the regression and contract tests guard its output.
+
+## Response to the test reviews
+
+Reviews by Linda Lin, 2026-10-27 ([feedback/20261027_ldlin_cmserrao.md](feedback/20261027_ldlin_cmserrao.md)), and Logan Russo, 2026-11-01 ([feedback/20261101_lrusso3_cmserrao.md](feedback/20261101_lrusso3_cmserrao.md)). Each finding is built in or answered in one line, with the reason.
+
+- **There is no backend API; is that allowed?** (Linda): *answered*. The tool runs in the browser on purpose, so no image data leaves the computer and the whole tool is one shareable file. The analysis modules play the backend's role in Web Workers; see [ARCHITECTURE.md](ARCHITECTURE.md).
+- **The contract between front and back is only implied** (Linda): *built in*. [ARCHITECTURE.md](ARCHITECTURE.md) now spells out every field `app.js` relies on, and `tests/check_contract.js` (part of `make test`) fails if any of them changes.
+- **No test has been shown failing on a planted defect** (Linda): *built in*. Two defects were planted and caught: a spot pair's radius not halved (caught by the contract test) and d-spacings without the square root (caught by `make check`). The sample tests passed the first one, which is why the contract test now checks pair radii.
+- **"Clear labels" leaves the marks on the image** (Linda): *built in*. A new **Remove all marks** button clears every spot and ring; **Re-detect features** brings the automatic ones back.
+- **Dragging a contrast slider also drags the image** (Logan): *built in*. Clicks on the toolbar no longer reach the image.
+- **"Calibrate by clicking…" then + Spot or + Ring froze the page** (Logan): *built in*. Same cause: the click on the tool button was counted as a calibration point. It no longer is.
+- **The Open folder / Open files buttons did not work** (Logan): *answered, not reproduced*. They work in Chrome; the VS Code preview browser does not open file dialogs. Use a regular browser or drag and drop.
+- **The interface is busy; features and phases fill in automatically** (Linda): *answered*. Auto-detection is the point of the tool, since it replaces hand measurement. **Hide weak** and per-feature hiding already thin the view; grouping the panels by colour is on the open list.
+- **Move "Best matches for this image" closer to the front** (Logan): *kept as is*. The reviewer marked it optional, and matches only make sense after the features above them are checked.
+- **A built-in tutorial** (Linda): *answered, not yet built*. The hover hints on every tool are the first step; a walkthrough is on the open list.
+- **Tests check consistency, not the science; add expected values** (Linda): *answered, not yet built*. The expected d-spacings must come from hand measurement in ImageJ, which is acceptance check 5, still open. They will go into `tests/sample_cases.json` when measured.
 
 ## Units
 
@@ -143,6 +159,7 @@ The full acceptance checks are in [PROMPT.md](PROMPT.md), section 6. In short:
 | Check | Pass condition | Status |
 |---|---|---|
 | Sample patterns (`make test`) | The 5 patterns in `samples/`: verified centres within tolerance, scale bars read, two runs identical | Passing |
+| Contract (`make test`) | Every field the UI reads from the analysis has the documented shape and units ([ARCHITECTURE.md](ARCHITECTURE.md)) | Passing |
 | Regression tests (`make lab-test`) | 16 verified centres within tolerance; two runs identical | Passing |
 | Synthetic pattern | Known d = 0.2222, 0.1538, 0.1081 nm returned exactly | Passing |
 | Calibration | All scale bars read; scale bar and DM4 agree within 0.1% | Passing (541/541, 0.08%) |
