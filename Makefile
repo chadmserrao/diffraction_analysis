@@ -10,7 +10,7 @@ COMPOSE := docker compose -f docker/compose.yaml
 RUN     := $(COMPOSE) run --rm -T app
 
 .DEFAULT_GOAL := help
-.PHONY: help build up down verify test check lint smoke dist lab-test shell clean
+.PHONY: help build up down verify test check lint smoke bench dist lab-test shell clean
 
 ##@ Everyday
 
@@ -44,6 +44,9 @@ test: ## Centre, scale bar and determinism on the patterns in samples/
 smoke: ## Start the app, check that the page and a sample are served, stop it
 	$(COMPOSE) up -d --wait annotator
 	$(COMPOSE) exec -T annotator python -c "import urllib.request as u; p = u.urlopen('http://127.0.0.1:8765/').read(); assert b'<title>' in p and len(p) > 1e6, 'page'; s = u.urlopen('http://127.0.0.1:8765/files/250704_0030.tif').read(); assert s[:2] in (b'II', b'MM'), 'sample'; print('Smoke test passed: page', round(len(p) / 1e6, 1), 'MB, sample', round(len(s) / 1e6, 1), 'MB')"; status=$$?; $(COMPOSE) down --remove-orphans; exit $$status
+
+bench: ## Time each stage on samples/ (median of 3 runs); BENCH_ARGS="--check bench/key.json" checks results are unchanged
+	$(RUN) node tools/bench.js $(BENCH_ARGS)
 
 dist: ## Rebuild dist/diffraction_annotator.html from src/
 	$(RUN) python build.py

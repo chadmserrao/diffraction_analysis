@@ -139,6 +139,23 @@ Reviews by Linda Lin, 2026-10-27 ([feedback/20261027_ldlin_cmserrao.md](feedback
 - **A built-in tutorial** (Linda): *answered, not yet built*. The hover hints on every tool are the first step; a walkthrough is on the open list.
 - **Tests check consistency, not the science; add expected values** (Linda): *answered, not yet built*. The expected d-spacings must come from hand measurement in ImageJ, which is acceptance check 5, still open. They will go into `tests/sample_cases.json` when measured.
 
+## Speed: one measured change
+
+`make bench` times what the worker runs on each pattern in `samples/` (read the file, find the scale bar, analyze), stage by stage, as the median of three runs with the spread (min to max). It ran in the development container on a MacBook Air (Apple Silicon).
+
+**Where the time goes.** Analysis takes about 85% of the time, reading the TIFFs about 13%, and the scale bar about 2%. A CPU profile of the analysis put the blur at the top: about a quarter of the time, mostly in its vertical pass. That pass walked the image one column at a time, jumping a whole row in memory between pixels.
+
+**The change.** The vertical pass of both blurs (`blur1d` and `boxPass` in `src/imageproc.js`) now walks whole rows and keeps one running sum per column. Each pixel adds the same terms in the same order, so every result is identical. On its own the blur is about 2× faster.
+
+**The answer key.** `make bench BENCH_ARGS="--save bench/key.json"` saved the full output for every sample before the change: image size, scale bar, centre, every feature, and the radial profile. `make bench BENCH_ARGS="--check bench/key.json"` compares the output against it. After the change it is identical. A planted rounding change in the new blur failed the check on all five samples.
+
+| Stage, all 5 samples | Before | After | Ratio |
+|---|---|---|---|
+| analyze (the part that dominates) | 17.760 s (17.456 to 17.937) | 15.451 s (15.394 to 19.081) | 1.15× faster |
+| whole run | 20.793 s (20.037 to 20.809) | 18.202 s (18.155 to 22.191) | 1.14× faster |
+
+`make verify` is green after the change. The next candidate is the ring fit, which is about 13% of the time and dominated by `Math.hypot`. Replacing it with a plain square root could change a last digit, so it was left as is.
+
 ## Units
 
 | Quantity | Unit |
@@ -172,6 +189,7 @@ The full acceptance checks are in [PROMPT.md](PROMPT.md), section 6. In short:
 
 ```bash
 make dist                                       # bundle src/ into dist/diffraction_annotator.html
+make bench BENCH_ARGS="--check bench/key.json"  # time each stage; check results match the answer key
 make lab-test                                   # needs the lab data; see Verifying results
 make shell                                      # a shell in the container, for the two below
 python3 tools/build_library.py                  # refresh library from Materials Project (needs key)
