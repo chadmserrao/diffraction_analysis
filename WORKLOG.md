@@ -259,6 +259,22 @@ All three findings were accepted; none were pushed back on.
 
 ---
 
+## 2026-11-09: Revisions after the systems reviews (7a)
+
+Logan (2026-11-05) and Linda (2026-11-09) reviewed `a2cb5ba` for round 5. What changed, finding by finding:
+
+- **Multi-file drop kept only the first file** (Logan). Cause: `entriesToFiles` in `src/app.js` called `webkitGetAsEntry()` inside the loop after an `await`, and the browser empties `DataTransferItemList` once the drop handler yields. Fix: take every entry first, then read them; the plain file list is also copied before the first `await` as the fallback.
+- **"+ Ring" snapping touchy** (Logan). Cause: `addRing` took the highest raw residual within ±max(6 px, 4 %) of the click. Measured on the samples, 2 px from each detected ring or halo, it landed 0 to 7 px off, and on the Au ring at 1055 px it jumped 41 px when clicked on or just outside the ring. Fix: new `DP.snapRing` in `src/imageproc.js` smooths the residual as the ring detection does and takes the nearest peak (ignoring bumps under a quarter of the strongest in reach); with none, the ring stays where clicked and a message says so. Now exact (0.0 px) 2 px either side of every detected ring and halo on the five samples; 6 px away it can pick a neighbouring real feature (for example the halo 10 px from the Au ring at 212 px).
+- **Test:** `tests/check_contract.js` checks the snap on the Au sample and the no-peak case. Planted the old behaviour (highest peak in a wide window): the test failed (worst 104 px), then restored.
+- **Auto-identify after Remove all marks did nothing** (Linda). Auto-identify only labels existing marks. With no marks it now runs Re-detect first, then identifies; the Remove all marks tooltip says so.
+- **Unlabelled slider** (Linda): labelled **Brightness** in `src/index.html`; both sliders' hover text says which way brightens.
+- **Colour rings and spots differently** (Linda): new **Style → Colour by → Feature type** (blues for rings and halos, oranges for spots and pairs), default unchanged (**Label**). The feature panel's swatches now show the colour actually drawn on the image, which before could differ when two labels clashed.
+- **System drawing** (both): new README section "Where everything runs": container, browser tab, workers, library, the optional Materials Project call, and how code and data arrive.
+- **Materials library confusing** (Logan): ARCHITECTURE.md now says the library is bundled data, and the only service boundary is the live search through `serve.py`.
+- **Checked in the browser** (`make up`, built-in preview): two files dropped at once both loaded (a scripted drop, so it took the plain file list, not the folder-entry path); Remove all marks (18 → 0) then Auto-identify brought back 18 features with the message; the sliders read Contrast and Brightness; Colour by feature type drew rings in blues and spots in oranges, and the panel swatches matched.
+- **Known limit:** a label shared by a ring and spots (one phase reflection seen as both) takes the colour of its innermost feature.
+- **Not verified:** a real drag of several files from Finder (the entry path), and "+ Ring" by hand; the ring snap is tested in Node.
+
 ## Open items
 
 - [ ] Apply the slide conventions as defaults (items 1–6 above).
@@ -272,7 +288,7 @@ All three findings were accepted; none were pushed back on.
 - [ ] Split `analyze` in `imageproc.js` into one file per step once a step needs to change on its own (code review, 2026-10-20).
 - [ ] Update the capstone repository on the course companion: it still lists `tem-search-twin`.
 - [ ] Add expected d-spacings to `tests/sample_cases.json` once the ImageJ hand comparison is done (test review, Linda).
-- [ ] Group the side panels by colour, and add a short built-in walkthrough (test review, Linda).
+- [ ] Add a short built-in walkthrough (test review, Linda). Colour by feature type is done (2026-11-09).
 
 ## How to rebuild and test
 

@@ -843,6 +843,29 @@
     return M.map((r, i) => r[n] / r[i]);
   }
 
+  // "+ Ring": snap a clicked radius r0 to the nearest ring peak in the analysis profile
+  // ([[r, median, background, residual]], r in original px). The residual is smoothed the way
+  // the ring detection smooths it, so a click on a ring lands where the detection would put it,
+  // and the nearest peak wins (not the highest), so a faint ring next to a bright one can be marked.
+  function snapRing(profile, r0) {
+    const n = profile ? profile.length : 0;
+    if (n < 7) return { r: r0, snapped: false };
+    const rr = profile.map((p) => p[0]), res = profile.map((p) => p[3]), rs = res.slice();
+    for (let i = 2; i < n - 2; i++) rs[i] = (res[i - 2] + 2 * res[i - 1] + 3 * res[i] + 2 * res[i + 1] + res[i + 2]) / 9;
+    const win = Math.max(8, 0.05 * r0);
+    const peaks = [];
+    for (let i = 3; i < n - 3; i++) {
+      if (!(rs[i] > rs[i - 1] && rs[i] >= rs[i + 1]) || !(rs[i] > 0) || Math.abs(rr[i] - r0) > win) continue;
+      const den = rs[i - 1] - 2 * rs[i] + rs[i + 1], off = den < 0 ? 0.5 * (rs[i - 1] - rs[i + 1]) / den : 0;
+      peaks.push({ r: rr[i] + off * (rr[i + 1] - rr[i]), h: rs[i] });
+    }
+    // ignore bumps far smaller than the strongest peak in reach (noise on a broad halo)
+    const hMax = Math.max(0, ...peaks.map((p) => p.h));
+    let best = null;
+    for (const p of peaks) if (p.h >= 0.25 * hMax && (best === null || Math.abs(p.r - r0) < Math.abs(best - r0))) best = p.r;
+    return best === null ? { r: r0, snapped: false } : { r: best, snapped: true };
+  }
+
   // radial profile about a given centre (for manual feature snapping / polar view)
   function radialProfile(gray, W, H, cx, cy, step) {
     step = step || 1;
@@ -871,6 +894,7 @@
   DP.detectScaleBar = detectScaleBar;
   DP.analyze = analyze;
   DP.radialProfile = radialProfile;
+  DP.snapRing = snapRing;
   DP.snapSpot = snapSpot;
   DP._blur = blur;
   DP._downsample = downsample;
