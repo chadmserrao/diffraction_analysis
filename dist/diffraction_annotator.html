@@ -143,8 +143,8 @@ a { color: var(--accent); }
         <button id="btnCenterMark" title="Show centre marker">Centre ✚</button>
       </div>
       <div class="seg" style="padding:0 8px; align-items:center; gap:6px">
-        <span class="small">Contrast</span><input type="range" id="rngGamma" min="0.3" max="2.5" step="0.05" value="1" title="Display gamma">
-        <input type="range" id="rngMax" min="20" max="255" step="1" value="255" title="White level">
+        <span class="small">Contrast</span><input type="range" id="rngGamma" min="0.3" max="2.5" step="0.05" value="1" title="Display gamma: slide left to lift faint features">
+        <span class="small">Brightness</span><input type="range" id="rngMax" min="20" max="255" step="1" value="255" title="White level: slide left to brighten faint rings">
       </div>
     </div>
     <div class="hint" id="hint" style="display:none"></div>
@@ -1371,6 +1371,29 @@ a { color: var(--accent); }
     return M.map((r, i) => r[n] / r[i]);
   }
 
+  // "+ Ring": snap a clicked radius r0 to the nearest ring peak in the analysis profile
+  // ([[r, median, background, residual]], r in original px). The residual is smoothed the way
+  // the ring detection smooths it, so a click on a ring lands where the detection would put it,
+  // and the nearest peak wins (not the highest), so a faint ring next to a bright one can be marked.
+  function snapRing(profile, r0) {
+    const n = profile ? profile.length : 0;
+    if (n < 7) return { r: r0, snapped: false };
+    const rr = profile.map((p) => p[0]), res = profile.map((p) => p[3]), rs = res.slice();
+    for (let i = 2; i < n - 2; i++) rs[i] = (res[i - 2] + 2 * res[i - 1] + 3 * res[i] + 2 * res[i + 1] + res[i + 2]) / 9;
+    const win = Math.max(8, 0.05 * r0);
+    const peaks = [];
+    for (let i = 3; i < n - 3; i++) {
+      if (!(rs[i] > rs[i - 1] && rs[i] >= rs[i + 1]) || !(rs[i] > 0) || Math.abs(rr[i] - r0) > win) continue;
+      const den = rs[i - 1] - 2 * rs[i] + rs[i + 1], off = den < 0 ? 0.5 * (rs[i - 1] - rs[i + 1]) / den : 0;
+      peaks.push({ r: rr[i] + off * (rr[i + 1] - rr[i]), h: rs[i] });
+    }
+    // ignore bumps far smaller than the strongest peak in reach (noise on a broad halo)
+    const hMax = Math.max(0, ...peaks.map((p) => p.h));
+    let best = null;
+    for (const p of peaks) if (p.h >= 0.25 * hMax && (best === null || Math.abs(p.r - r0) < Math.abs(best - r0))) best = p.r;
+    return best === null ? { r: r0, snapped: false } : { r: best, snapped: true };
+  }
+
   // radial profile about a given centre (for manual feature snapping / polar view)
   function radialProfile(gray, W, H, cx, cy, step) {
     step = step || 1;
@@ -1399,6 +1422,7 @@ a { color: var(--accent); }
   DP.detectScaleBar = detectScaleBar;
   DP.analyze = analyze;
   DP.radialProfile = radialProfile;
+  DP.snapRing = snapRing;
   DP.snapSpot = snapSpot;
   DP._blur = blur;
   DP._downsample = downsample;
@@ -1842,6 +1866,10 @@ self.onmessage = async (ev) => {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const KIND = { pair: 'Spot pair', spot: 'Single spot', ring: 'Ring (polycrystalline)', spotty: 'Spotty ring', halo: 'Diffuse halo (amorphous)' };
+  // "Colour by feature type": rings and halos in shades of blue, spots and spot pairs in shades of orange
+  const RING_SHADES = ['#00b0f0', '#9ad0ff', '#40e0d0', '#4f7cff', '#c8e7ff', '#2bb5a8', '#7fb3ff', '#1e90ff'];
+  const SPOT_SHADES = ['#ff9500', '#ffc000', '#ff3b30', '#ffd1a1', '#f4a261', '#e9c46a', '#ff6f3c', '#ffe08a'];
+  const isRingKind = (k) => k === 'ring' || k === 'halo' || k === 'spotty';
   const PALETTE = ['#ffffff', '#ffc000', '#ff3b30', '#34c759', '#00b0f0', '#ff66cc', '#ff9500', '#a78bfa', '#7cfc00', '#40e0d0', '#ffd1dc', '#f4a261', '#9ad0ff', '#e9c46a', '#c77dff', '#b5e48c'];
   const EXT = ['tif', 'tiff', 'dm3', 'dm4', 'png', 'jpg', 'jpeg', 'bmp'];
 
@@ -1855,7 +1883,7 @@ self.onmessage = async (ev) => {
     style: {
       font: 'Calibri, Carlito, "Segoe UI", Arial, sans-serif', fontSize: 34, legendBg: 'none', legendSwatch: 'none', showD: 'measured', dDigits: 3,
       markerSize: 14, lineWidth: 3, arcSpan: 90, arcMode: 'auto', arcAngle: 45, showCenter: false, labelMarks: false,
-      scaleBar: 'off', exportRegion: 'full', exportScale: 1,
+      scaleBar: 'off', exportRegion: 'full', exportScale: 1, colorBy: 'label',
     },
     labelStyles: {}, apiKey: '', rememberKey: false, preferred: [],
   };
@@ -1971,6 +1999,9 @@ self.onmessage = async (ev) => {
   }
   // folder drag & drop (recursive)
   async function entriesToFiles(items) {
+    // Take every entry before the first await: the browser empties the drop's item list once
+    // the event handler yields, so reading entries inside the loop kept only the first file.
+    const entries = Array.from(items, (it) => it.webkitGetAsEntry && it.webkitGetAsEntry()).filter(Boolean);
     const out = [];
     const walk = (entry, path) => new Promise((res) => {
       if (entry.isFile) entry.file((f) => { f.relPath = path + f.name; out.push(f); res(); }, () => res());
@@ -1980,7 +2011,7 @@ self.onmessage = async (ev) => {
         more();
       } else res();
     });
-    for (const it of items) { const e = it.webkitGetAsEntry && it.webkitGetAsEntry(); if (e) await walk(e, ''); }
+    for (const e of entries) await walk(e, '');
     return out;
   }
   function setStatus(t) { $('status').textContent = t; }
@@ -2091,7 +2122,7 @@ self.onmessage = async (ev) => {
     }
     // each label keeps its saved colour across images; clashes inside one image get the next free colour
     const used = new Set();
-    let i = 0;
+    let i = 0, nRing = 0, nSpot = 0;
     const out = Array.from(groups.entries()).map(([label, fs]) => {
       const ds = fs.map((f) => f.d).filter(Boolean);
       const dMeas = ds.length ? ds.reduce((a, b) => a + b, 0) / ds.length : null;
@@ -2100,6 +2131,7 @@ self.onmessage = async (ev) => {
       let style = saved;
       if (used.has(saved.color.toLowerCase())) { const free = PALETTE.find((c) => !used.has(c)); if (free) style = Object.assign({}, saved, { color: free }); }
       used.add(style.color.toLowerCase());
+      if (SET.style.colorBy === 'kind') { const ring = isRingKind(fs[0].kind), shades = ring ? RING_SHADES : SPOT_SHADES; style = Object.assign({}, style, { color: shades[(ring ? nRing++ : nSpot++) % shades.length] }); }
       return { label, feats: fs, dMeas, dRef, style };
     });
     return out;
@@ -2352,10 +2384,11 @@ self.onmessage = async (ev) => {
       <div class="row"><button id="btnSetCenter">Set centre by clicking</button><button id="btnReanalyse" title="Re-run detection with the current centre and sample type">Re-detect features</button><button id="btnAutoCenter">Auto centre</button></div></div>`;
     const feats = im.features.slice().sort((a, b) => a.r - b.r);
     h += `<div class="card"><h3>Features <span class="small" style="text-transform:none;letter-spacing:0">(${feats.length})</span></h3>
-      <div class="row"><button id="btnAutoAssign" title="Match all features against the selected phases">Auto-identify</button><button id="btnClearAssign" title="Remove the phase labels, keep the marks">Clear labels</button><button id="btnClearMarks" title="Remove every spot and ring marked on this image (Re-detect features brings the automatic ones back)">Remove all marks</button><button id="btnHideWeak" title="Hide features with low signal">Hide weak</button></div>`;
+      <div class="row"><button id="btnAutoAssign" title="Match all features against the selected phases">Auto-identify</button><button id="btnClearAssign" title="Remove the phase labels, keep the marks">Clear labels</button><button id="btnClearMarks" title="Remove every spot and ring marked on this image (Re-detect features or Auto-identify brings the automatic ones back)">Remove all marks</button><button id="btnHideWeak" title="Hide features with low signal">Hide weak</button></div>`;
     if (!feats.length) h += '<p class="small">No features detected. Use + Spot or + Ring on the image, or change the sample type.</p>';
+    const shown = new Map(legendEntries(im).map((e) => [e.label, e.style])); // the colours drawn on the image
     for (const f of feats) {
-      const lb = featureLabel(f), st = labelStyle(lb);
+      const lb = featureLabel(f), st = shown.get(lb) || labelStyle(lb);
       const cands = im.cal && im.cal.scale && f.d ? DP.crystal.candidatesFor(f.d, phasePool(), { tol: SET.tol / 100 * (f.kind === 'halo' ? 2 : 1), max: 10 }) : [];
       const curKey = f.assign ? f.assign.phase + '|' + f.assign.label : '';
       const opts = ['<option value="">— unassigned —</option>'].concat(cands.map((cd, i) => { const key = (cd.phase.display || cd.phase.name) + '|' + cd.label; return `<option value="${i}" ${key === curKey ? 'selected' : ''}>${esc((cd.phase.display || cd.phase.name) + ' ' + cd.label)}  ${cd.dRef.toFixed(4)} nm (${cd.err >= 0 ? '+' : ''}${(cd.err * 100).toFixed(1)}%)</option>`; }));
@@ -2425,6 +2458,7 @@ self.onmessage = async (ev) => {
       <div class="row"><label>Background</label><select id="stBg"><option value="none" ${st.legendBg === 'none' ? 'selected' : ''}>None</option><option value="dark" ${st.legendBg === 'dark' ? 'selected' : ''}>Dark box</option><option value="light" ${st.legendBg === 'light' ? 'selected' : ''}>Light box</option></select></div>
       <div class="row"><label>Symbol</label><select id="stSw"><option value="none" ${st.legendSwatch === 'none' ? 'selected' : ''}>Coloured text only</option><option value="marker" ${st.legendSwatch === 'marker' ? 'selected' : ''}>Marker + text</option></select></div>
       <div class="row"><label>d-spacing</label><select id="stShowD"><option value="measured" ${st.showD === 'measured' ? 'selected' : ''}>Measured</option><option value="reference" ${st.showD === 'reference' ? 'selected' : ''}>Reference (database)</option><option value="none" ${st.showD === 'none' ? 'selected' : ''}>Hide</option></select><select id="stDig">${[2, 3, 4].map((d) => `<option ${d === st.dDigits ? 'selected' : ''}>${d}</option>`).join('')}</select><span class="small">decimals</span></div>
+      <div class="row"><label>Colour by</label><select id="stColorBy"><option value="label" ${st.colorBy !== 'kind' ? 'selected' : ''}>Label (same colour in every image)</option><option value="kind" ${st.colorBy === 'kind' ? 'selected' : ''}>Feature type (rings blue, spots orange)</option></select></div>
       <div class="row"><label><input type="checkbox" id="stLabelMarks" ${st.labelMarks ? 'checked' : ''}> Label each marker</label></div>
       <div class="row"><button id="btnLegendReset">Reset legend position</button><span class="small">Drag the legend on the image to move it.</span></div></div>`;
     h += `<div class="card"><h3>Markers</h3>
@@ -2434,7 +2468,7 @@ self.onmessage = async (ev) => {
       <div class="row"><label>Arc position</label><select id="stArcMode"><option value="auto" ${st.arcMode === 'auto' ? 'selected' : ''}>Relative to beam stop</option><option value="fixed" ${st.arcMode === 'fixed' ? 'selected' : ''}>Fixed angle</option></select><input type="range" id="stArcAng" min="-180" max="180" value="${st.arcAngle}" title="Rotate arcs"></div>
       <div class="row"><label><input type="checkbox" id="stCenter" ${st.showCenter ? 'checked' : ''}> Show centre in export</label></div></div>`;
     if (im && im.status === 'done') {
-      h += '<div class="card"><h3>Colours & line styles</h3><div class="small">Styles follow the label, so "Na {200}" looks the same in every image.</div>';
+      h += '<div class="card"><h3>Colours & line styles</h3><div class="small">Styles follow the label, so "Na {200}" looks the same in every image. With Colour by feature type, the colours below are replaced by blue for rings and orange for spots.</div>';
       legendEntries(im).forEach((e, i) => {
         const s = e.style;
         h += `<div class="row" data-lb="${esc(e.label)}"><input type="color" data-act="color" value="${s.color}"><span style="flex:1;color:${s.color}">${esc(e.label)}</span>
@@ -2578,8 +2612,8 @@ self.onmessage = async (ev) => {
   }
   function addRing(im, p) {
     const c = im.center, r0 = Math.hypot(p.x - c.x, p.y - c.y);
-    let best = r0, bv = -Infinity;
-    for (const [r, , , res] of im.profile || []) if (Math.abs(r - r0) < Math.max(6, 0.04 * r0) && res > bv) { bv = res; best = r; }
+    const snap = DP.snapRing(im.profile, r0), best = snap.r;
+    if (!snap.snapped) toast('No ring peak near the click: the ring was placed where you clicked.');
     const feat = { kind: 'ring', r: best, fwhm: 0, points: [], uid: 'u' + (++uid), source: 'manual', visible: true, assign: null, custom: '' };
     im.features.push(feat); recomputeD(im); if (SET.autoAssign) autoAssign(im);
     S.selFeat = feat.uid; renderAll();
@@ -2626,6 +2660,7 @@ self.onmessage = async (ev) => {
     if (id === 'btnSetCenter') return setTool('center');
     if (id === 'btnReanalyse') return reanalyse(im, im.centerMethod === 'manual' ? im.center : null);
     if (id === 'btnAutoCenter') return reanalyse(im, null);
+    if (id === 'btnAutoAssign' && !im.features.length) { toast('No marks on this image: detecting features first.'); return reanalyse(im, im.centerMethod === 'manual' ? im.center : null).then(() => { autoAssign(im); renderAll(); }); }
     if (id === 'btnAutoAssign') { im.features.forEach((f) => { if (f.assign) f.assign.auto = true; }); autoAssign(im); renderAll(); return; }
     if (id === 'btnClearAssign') { im.features.forEach((f) => { f.assign = null; f.custom = ''; }); renderAll(); return; }
     if (id === 'btnClearMarks') { im.features = []; S.selFeat = null; renderAll(); return; }
@@ -2662,7 +2697,7 @@ self.onmessage = async (ev) => {
   });
   $('tab-style').addEventListener('input', (ev) => {
     const t = ev.target, st = SET.style, im = S.images[S.cur];
-    const map = { stFont: 'font', stFontSize: 'fontSize', stBg: 'legendBg', stSw: 'legendSwatch', stShowD: 'showD', stDig: 'dDigits', stMs: 'markerSize', stLw: 'lineWidth', stSpan: 'arcSpan', stArcMode: 'arcMode', stArcAng: 'arcAngle', stRegion: 'exportRegion', stScale: 'exportScale', stSB: 'scaleBar' };
+    const map = { stFont: 'font', stFontSize: 'fontSize', stBg: 'legendBg', stSw: 'legendSwatch', stShowD: 'showD', stDig: 'dDigits', stMs: 'markerSize', stLw: 'lineWidth', stSpan: 'arcSpan', stArcMode: 'arcMode', stArcAng: 'arcAngle', stRegion: 'exportRegion', stScale: 'exportScale', stSB: 'scaleBar', stColorBy: 'colorBy' };
     if (map[t.id]) { const num = ['fontSize', 'dDigits', 'markerSize', 'lineWidth', 'arcSpan', 'arcAngle', 'exportScale'].includes(map[t.id]); st[map[t.id]] = num ? parseFloat(t.value) : t.value; }
     if (t.id === 'stLabelMarks') st.labelMarks = t.checked;
     if (t.id === 'stCenter') st.showCenter = t.checked;
@@ -2831,7 +2866,7 @@ self.onmessage = async (ev) => {
   $('btnHelp').onclick = help;
   stage.addEventListener('dragover', (ev) => { ev.preventDefault(); stage.classList.add('drag'); });
   stage.addEventListener('dragleave', () => stage.classList.remove('drag'));
-  stage.addEventListener('drop', async (ev) => { ev.preventDefault(); stage.classList.remove('drag'); const files = await entriesToFiles(Array.from(ev.dataTransfer.items)); addFiles(files.length ? files : Array.from(ev.dataTransfer.files)); });
+  stage.addEventListener('drop', async (ev) => { ev.preventDefault(); stage.classList.remove('drag'); const plain = Array.from(ev.dataTransfer.files); const files = await entriesToFiles(ev.dataTransfer.items); addFiles(files.length ? files : plain); });
   document.body.addEventListener('dragover', (ev) => ev.preventDefault());
   document.body.addEventListener('drop', (ev) => ev.preventDefault());
   window.addEventListener('resize', () => { if (S.polar) renderPolar(); });

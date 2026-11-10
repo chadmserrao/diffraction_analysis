@@ -10,6 +10,15 @@ that API directly.
 This is on purpose: no image data leaves the computer, and the whole tool is one
 HTML file (`dist/diffraction_annotator.html`) that can be shared with the lab.
 
+**Where the materials library sits.** The library is data, not a service. It is
+built once from the Materials Project by `tools/build_library.py` (and
+`tools/precompute_reflections.js`), committed as `src/library_data.js` and
+`src/library_refl.js`, and bundled into the page, so `crystal.js` reads it like
+any other module. It is not a database: nothing writes to it while the tool runs.
+The one real service boundary is the optional live search: `app.js` asks
+`serve.py`, which calls the Materials Project API. The README's "Where everything
+runs" draws the whole system.
+
 ## The pipeline
 
 ```text

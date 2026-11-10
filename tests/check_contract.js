@@ -39,6 +39,11 @@ const num = (v) => typeof v === 'number' && Number.isFinite(v);
   const pairErr = Math.max(0, ...pairs.map((f) => Math.abs(f.r - Math.hypot(f.points[0].x - f.points[1].x, f.points[0].y - f.points[1].y) / 2)));
   check(pairs.length === 0 || pairErr < 0.5, `analysis: each spot pair's radius is half its spot-to-spot distance (${pairs.length} pairs, worst ${pairErr.toFixed(2)} px)`);
   check(Array.isArray(a.profile) && a.profile.every((row) => row.length === 4 && row.every(num)), 'analysis: profile rows are [r, median, background, residual]');
+  // "+ Ring" (DP.snapRing): a click 2 px inside or outside a ring found in the profile lands on that ring.
+  const rings = a.features.filter((f) => f.kind === 'ring' || f.kind === 'halo');
+  const snapErr = Math.max(0, ...rings.flatMap((f) => [-2, 2].map((d) => Math.abs(DP.snapRing(a.profile, f.r + d).r - f.r))));
+  check(rings.length > 0 && snapErr < 0.5, `+ Ring: a click 2 px off a detected ring snaps onto it (${rings.length} rings, worst ${snapErr.toFixed(2)} px)`);
+  check(DP.snapRing(a.profile, 5).snapped === false && DP.snapRing(a.profile, 5).r === 5, '+ Ring: with no ring peak near the click, the ring stays where it was clicked');
 
   console.log(fail ? fail + ' FAILED' : 'ALL PASSED');
   process.exit(fail ? 1 : 0);

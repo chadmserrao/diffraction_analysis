@@ -47,6 +47,32 @@ The following file types are supported:
 
 The results are deterministic: the same file always gives the same result. Run the regression tests to check.
 
+## Where everything runs
+
+```text
+ your computer
+ ┌──────────────────────────────────────────────────────────────────────────────┐
+ │  Docker container (make up)                     browser tab                  │
+ │  ┌──────────────────────────────┐   page   ┌───────────────────────────────┐ │
+ │  │ serve.py  127.0.0.1:8765     │ ───────► │ app.js: UI, state S, export   │ │
+ │  │  serves dist/…annotator.html │          │   │ image bytes ▲ results     │ │
+ │  │  proxies live MP search ─────┼──┐       │   ▼             │             │ │
+ │  └──────────────────────────────┘  │       │ Web Workers: tiff/dm.js,      │ │
+ │        ▲ repo mounted at /work     │       │   imageproc.js (the analysis) │ │
+ │  git clone of this repository      │       │ crystal.js + built-in library │ │
+ │  samples/ (original patterns)      │       └───────────────▲───────────────┘ │
+ │                                    │                       │ drop / Open     │
+ │                                    │          your pattern files (TIFF, DM)  │
+ └────────────────────────────────────┼─────────────────────────────────────────┘
+                                      ▼ only if you search live (needs an API key)
+                            Materials Project API (internet)
+```
+
+- **Code** arrives by `git clone`. The container runs it from the mounted repository, and `make dist` bundles it into one HTML file. That file also works without the container: open it straight in a browser.
+- **Your images** never leave the computer. The page reads them from disk, and the workers analyse them in the browser tab. Results are saved only when you export or **Save project**.
+- **The phase library** is data built once, by `tools/build_library.py`, and bundled into the page (`library_data.js`, `library_refl.js`), so matching needs no network. The only thing that leaves the computer is an optional live Materials Project search, and only `serve.py` makes it.
+- **Original data and backups:** the sample patterns in `samples/` and the reviews in `feedback/` are originals, kept as received; GitHub holds their copy. Everything else (`dist/`, the library files, `bench/key.json`) is rebuilt by a script. Your own patterns stay wherever you keep them; the tool never changes them.
+
 ## How the code is organized
 
 Each module in `src/` has one job. Every pattern passes through the same pipeline, in this order:
@@ -138,6 +164,18 @@ Reviews by Linda Lin, 2026-10-27 ([feedback/20261027_ldlin_cmserrao.md](feedback
 - **Move "Best matches for this image" closer to the front** (Logan): *kept as is*. The reviewer marked it optional, and matches only make sense after the features above them are checked.
 - **A built-in tutorial** (Linda): *answered, not yet built*. The hover hints on every tool are the first step; a walkthrough is on the open list.
 - **Tests check consistency, not the science; add expected values** (Linda): *answered, not yet built*. The expected d-spacings must come from hand measurement in ImageJ, which is acceptance check 5, still open. They will go into `tests/sample_cases.json` when measured.
+
+## Response to the systems reviews
+
+Reviews by Logan Russo, 2026-11-05 ([feedback/20261104_lrusso3_cmserrao.md](feedback/20261104_lrusso3_cmserrao.md)), and Linda Lin, 2026-11-09 ([feedback/20261108_ldlin_cmserrao.md](feedback/20261108_ldlin_cmserrao.md)), of commit `a2cb5ba`. Each finding is built in or answered in one line, with the reason.
+
+- **Dropping several files at once kept only the first** (Logan): *built in*. The browser empties the list of dropped items as soon as the drop handler pauses, so the page now takes every item before it starts reading any of them.
+- **"+ Ring" snapping is touchy; a click on the ring sometimes did not snap** (Logan): *built in*. It snapped to the highest point of the raw, noisy profile within a few percent of the click, which on the Au standard jumped 41 px off a ring clicked right on it. It now snaps to the nearest peak of the profile smoothed the way ring detection smooths it (`DP.snapRing`), says so when there is no peak nearby, and `make test` checks that a click 2 px off each detected ring lands on it.
+- **After Remove all marks, Auto-identify does not bring the points back** (Linda): *built in*. Auto-identify only names marks that exist, so with no marks it now re-detects the features first, then identifies them.
+- **The slider next to Contrast has no label** (Linda): *built in*. It is labelled **Brightness** (the white level), and both sliders say in their hover text which way brightens faint features.
+- **Tell rings and spots apart by colour** (Linda): *built in* as an option. **Style → Colour by → Feature type** draws rings and halos in shades of blue and spots in shades of orange. The default stays **Label**, so a phase keeps one colour across a set of figures.
+- **The system is explained mostly in text** (Logan, Linda): *built in*. "Where everything runs", above, draws the container, the browser tab, the workers and the one outside service, with how code and data reach each.
+- **The split is confusing because of the materials library** (Logan): *answered*. The library is data bundled into the page, not a service; [ARCHITECTURE.md](ARCHITECTURE.md) now says so, and the only service boundary is the optional live search through `serve.py`.
 
 ## Speed: one measured change
 
