@@ -275,6 +275,11 @@ Logan (2026-11-05) and Linda (2026-11-09) reviewed `a2cb5ba` for round 5. What c
 - **Known limit:** a label shared by a ring and spots (one phase reflection seen as both) takes the colour of its innermost feature.
 - **Not verified:** a real drag of several files from Finder (the entry path), and "+ Ring" by hand; the ring snap is tested in Node.
 
+## 2026-11-18: Capstone check-in
+
+- **Check-in:** [docs/check-in.md](docs/check-in.md) describes where the capstone stands against the plan (`PROMPT.md`) at `3ec021f`: what works, the planted defect that the sample tests missed, what is cut (the walkthrough, most of M6's defaults, splitting `analyze`), and what is thrown away and what is kept.
+- **Re-checked at `3ec021f`:** `make check`, `make test` and the Au standard's d-spacings, which are quoted in the check-in. The Au {111} ring is still missed (plan check 4).
+
 ## Open items
 
 - [ ] Apply the slide conventions as defaults (items 1–6 above).
@@ -288,7 +293,7 @@ Logan (2026-11-05) and Linda (2026-11-09) reviewed `a2cb5ba` for round 5. What c
 - [ ] Split `analyze` in `imageproc.js` into one file per step once a step needs to change on its own (code review, 2026-10-20).
 - [ ] Update the capstone repository on the course companion: it still lists `tem-search-twin`.
 - [ ] Add expected d-spacings to `tests/sample_cases.json` once the ImageJ hand comparison is done (test review, Linda).
-- [ ] Add a short built-in walkthrough (test review, Linda). Colour by feature type is done (2026-11-09).
+- [x] ~~Add a short built-in walkthrough~~: cut in the check-in (2026-11-18); the hover hints and help stay. Colour by feature type is done (2026-11-09).
 
 ## How to rebuild and test
 
