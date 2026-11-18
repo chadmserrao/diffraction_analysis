@@ -12,7 +12,7 @@
 - **Speed.** `make bench` showed me that the analysis takes about 85% of the time. I rewrote the blur step and it got about 15% faster, with exactly the same results. The README section "Speed: one measured change" has the numbers.
 - **Everything at once.** `make verify` runs lint, the crystal checks, the sample tests, the contract test and a smoke test of the running app, and it all passes.
 
-## What failed, and what I learned
+## What failed and what was learned
 
 I assumed `make test` would catch a wrong answer. To find out, I broke the code on purpose: I stopped halving the distance between a pair of spots, which doubles the radius and halves every spot-pair d-spacing. The sample tests still passed. Looking closer, they only check the centre, the scale bar and that two runs agree. They never look at a d-spacing at all.
 
@@ -20,7 +20,7 @@ So I wrote down exactly what the analysis hands to the interface ([ARCHITECTURE.
 
 One thing is still broken: plan check 4. On the gold standard, the tool misses the {111} ring right next to the beam stop (d = 0.2355 nm), which is why the list above starts at {200}.
 
-## What I am cutting, and why
+## Cuts and motivation
 
 - **A built-in walkthrough.** Linda suggested one in the test review. Every tool already has a hover hint and the page has a help button, so I'd rather spend the time on the ImageJ comparison.
 - **Making all the lab's slide conventions the default (most of M6).** You can already choose dashed or dotted arcs, hide weak or unlabelled features, and colour rings and spots differently. Making each of those the default is mostly a matter of taste, so it can wait until after the draft.
@@ -28,7 +28,7 @@ One thing is still broken: plan check 4. On the gold standard, the tool misses t
 
 **What the 30 November draft will still claim:** you drop in a folder of diffraction patterns and, for each one, get the centre, every halo, ring and spot with a d-spacing within 2% of what you'd measure by hand in ImageJ, a ranked list of likely phases, and a figure ready for a slide, all running on your own computer.
 
-## Built to throw away, and built to last
+## What gets thrown away and what is kept
 
 - **Throwing away: the "centre only" sample tests.** Right now `tests/sample_cases.json` checks the centre, the scale bar and that runs repeat. That's good enough for now, but once I've measured 10 patterns by hand in ImageJ (plan check 5), those measurements become the expected d-spacings and the tests will check them instead.
 - **Keeping: the answer key and the contract test.**
