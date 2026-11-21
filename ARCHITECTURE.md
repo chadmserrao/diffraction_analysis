@@ -70,9 +70,11 @@ assignments.
 | Unit | `tests/check_crystal.js`: reflections and spacings on Au and Na | `make check` |
 | Contract | `tests/check_contract.js`: the fields above on a sample pattern | `make test` |
 | Integration | `tests/regression.js`: centre, scale bar and determinism on `samples/` | `make test` |
+| Known answer | `tests/check_known_answers.js`: Au {200}, {220}, {311} within 2% of textbook gold, and gold ranked first with those labels | `make test` |
 | Smoke | the running app serves the page and a sample | `make smoke` |
 | Answer key | `tools/bench.js --check bench/key.json`: every result on `samples/` identical to the saved key | `make bench` |
 
 `make verify` runs all of them. The unit and contract tests were each shown
-failing on a planted defect (see `WORKLOG.md`, 2026-11-04). The integration test
-was not: it checks centres and determinism, so it passes a wrong d-spacing.
+failing on a planted defect (see `WORKLOG.md`, 2026-11-04), and the known-answer
+test on a planted 3% radius error (2026-11-20). The integration test was not: it
+checks centres and determinism, so it passes a wrong d-spacing.

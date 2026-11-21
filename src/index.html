@@ -60,8 +60,8 @@
         <button id="btnCenterMark" title="Show centre marker">Centre ✚</button>
       </div>
       <div class="seg" style="padding:0 8px; align-items:center; gap:6px">
-        <span class="small">Contrast</span><input type="range" id="rngGamma" min="0.3" max="2.5" step="0.05" value="1" title="Display gamma: slide right to lift faint features">
-        <span class="small">Brightness</span><input type="range" id="rngMax" min="20" max="255" step="1" value="255" title="White level: slide left to brighten faint rings">
+        <span class="small">Gamma</span><input type="range" id="rngGamma" min="0.3" max="2.5" step="0.05" value="1" title="Display gamma: slide right to lift faint features without saturating the bright ones">
+        <span class="small">Brightness</span><input type="range" id="rngMax" min="20" max="255" step="1" value="20" title="Brightness: slide right to brighten faint rings (bright spots saturate first)">
       </div>
     </div>
     <div class="hint" id="hint" style="display:none"></div>
