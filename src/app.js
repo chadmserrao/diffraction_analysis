@@ -667,7 +667,7 @@
 
   // ---------------- re-analysis ----------------
   async function reanalyse(im, center) {
-    const keepCal = im.cal && im.cal.source === 'manual' ? im.cal : null;
+    const keepCal = im.cal && (im.cal.source === 'manual' || im.cal.edited) ? im.cal : null; // a calibration the user set or corrected survives re-detection
     const manual = im.features.filter((f) => f.source === 'manual');
     im.status = 'working'; renderFileItem(im); renderPanel();
     const r = await runJob(im.file, { preset: im.preset, center: center || null }, { analyze: true }, true);
@@ -776,7 +776,7 @@
     const t = ev.target;
     if (t.id === 'calValue' || t.id === 'calPx') {
       const v = parseFloat($('calValue').value), px = parseFloat($('calPx').value);
-      if (v > 0 && px > 0) { im.cal = Object.assign({}, im.cal, { scale: v / px, value: v, lengthPx: px, ok: true, unit: '1/nm', source: im.cal.source === 'scale bar' ? 'scale bar' : 'manual' }); recomputeD(im); if (SET.autoAssign) autoAssign(im); renderAll(); }
+      if (v > 0 && px > 0) { im.cal = Object.assign({}, im.cal, { scale: v / px, value: v, lengthPx: px, ok: true, unit: '1/nm', edited: true, source: im.cal.source === 'scale bar' ? 'scale bar' : 'manual' }); recomputeD(im); if (SET.autoAssign) autoAssign(im); renderAll(); }
       return;
     }
     const fe = t.closest('.feat'); if (!fe) return;
