@@ -177,6 +177,17 @@ Reviews by Logan Russo, 2026-11-05 ([feedback/20261104_lrusso3_cmserrao.md](feed
 - **The system is explained mostly in text** (Logan, Linda): *built in*. "Where everything runs", above, draws the container, the browser tab, the workers and the one outside service, with how code and data reach each.
 - **The split is confusing because of the materials library** (Logan): *answered*. The library is data bundled into the page, not a service; [ARCHITECTURE.md](ARCHITECTURE.md) now says so, and the only service boundary is the optional live search through `serve.py`.
 
+## Response to the safety-net reviews
+
+Linda (2026-11-15) and Logan (2026-11-20) reviewed `44725cc` for round 6. What changed, finding by finding:
+
+- **No capstone check-in** (Linda). It's now in [docs/check-in.md](docs/check-in.md).
+- **No CLAUDE.md** (Linda). Added [CLAUDE.md](CLAUDE.md), with only what the agent can't learn from the code: results mustn't change without saying so, a test counts only once it's been seen failing, and the known Au {111} miss shouldn't be hidden.
+- **Write a skill for checking a change end to end** (Linda). Added [`/verify-change`](.claude/skills/verify-change/SKILL.md). It runs the gate and the answer key, checks the bundle is current, and asks whether each new test was seen failing. It only reports; it never edits. I tested it in a fresh session. Linda's second idea, a skill for building in feedback, I've left for now because each round's feedback is different enough that I still want to read it myself.
+- **Nothing checks d-spacings or phase labels against a known answer** (Linda). New `tests/check_known_answers.js`, run by `make test`. On the Au standard, the {200}, {220} and {311} rings must come out within 2% of textbook gold, and gold must win against sodium and copper with those labels. When I planted a 3% error in every ring radius, this test failed while the old sample tests still passed.
+- **Calibrate wouldn't take the second click, or did nothing** (Logan). The second click opened a `window.prompt`, which some browsers block. When that happens it returns straight away and nothing changes. I saw that in the built-in browser. Now an in-page dialog asks for the length, the clicked line stays on the image, and a message says how much the calibration moved.
+- **The sliders feel backwards** (Logan). He's right. Brightness now gets brighter to the right. The first slider is a display gamma, so it's labelled Gamma, and it also lifts faint features to the right.
+
 ## Speed: one measured change
 
 `make bench` times what the worker runs on each pattern in `samples/` (read the file, find the scale bar, analyze), stage by stage, as the median of three runs with the spread (min to max). It ran in the development container on a MacBook Air (Apple Silicon).

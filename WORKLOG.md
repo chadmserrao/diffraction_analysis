@@ -288,6 +288,16 @@ Logan (2026-11-05) and Linda (2026-11-09) reviewed `a2cb5ba` for round 5. What c
 - **Rejected:** limiting "+ Ring" to peaks the detector would accept. I measured that it does snap to small bumps away from any ring, but "+ Ring" exists to mark rings the detector misses (Au {111}).
 - **Checked:** `make verify` and `make bench BENCH_ARGS="--check bench/key.json"` both pass, so the analysis results are unchanged.
 
+## 2026-11-20: Revisions after the safety-net reviews (8a)
+
+Linda (2026-11-15) and Logan (2026-11-20) reviewed `44725cc`. The README's "Response to the safety-net reviews" goes through it finding by finding.
+
+- **Known-answer test:** `tests/check_known_answers.js` checks the Au standard's d-spacings against textbook gold, and that gold is ranked first with the right labels. It's part of `make test`. Planted a 3% scale on every ring radius in `imageproc.js`: the new test failed three checks and the contract test two, while the sample tests still passed. Then I restored the code.
+- **Calibrate tool:** I reproduced Logan's problem in the built-in browser: after the second click, no prompt appeared and nothing changed. I replaced `window.prompt` with an in-page dialog and checked it: the dialog opens, Set calibration updates every d-spacing, and the message gives the change.
+- **Sliders:** Brightness now runs bright to the right, and the gamma slider is labelled Gamma.
+- **CLAUDE.md** and the **`/verify-change` skill** are new. I ran the skill in a fresh `claude -p` session; its report is in `docs/referee/verify-change-run.md`.
+- **Not verified:** the sliders by hand (I checked the label and starting value in the page, and the direction by reading the code), and the calibrate dialog in Safari or Firefox.
+
 ## Open items
 
 - [ ] Apply the slide conventions as defaults (items 1–6 above).

@@ -37,9 +37,10 @@ lint: ## Syntax check of every Python and JavaScript file
 check: ## Checks that need no images: crystal maths and the phase library
 	$(RUN) node tests/check_crystal.js
 
-test: ## Centre, scale bar and determinism on the patterns in samples/
+test: ## Sample tests, the contract, and the Au standard's d-spacings and labels against textbook gold
 	$(RUN) node tests/regression.js tests/sample_cases.json
 	$(RUN) node tests/check_contract.js
+	$(RUN) node tests/check_known_answers.js
 
 smoke: ## Start the app, check that the page and a sample are served, stop it
 	$(COMPOSE) up -d --wait annotator

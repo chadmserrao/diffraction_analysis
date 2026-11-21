@@ -650,6 +650,28 @@
     };
   }
   function modal(html) { $('modal').innerHTML = html; $('modalBg').style.display = 'flex'; }
+  // Calibrate by clicking: ask for the clicked length in an in-page dialog. window.prompt is blocked in some
+  // browsers and embedded views, where it returns at once and the calibration silently did nothing.
+  function askCalibLength(im, len) {
+    const def = im.sb && im.sb.value ? im.sb.value : 5;
+    modal(`<h3>Calibrate</h3><p>You clicked ${len.toFixed(1)} px. What is this length in 1/nm?</p>
+      <div class="row"><input type="number" step="any" min="0" id="calAskValue" value="${def}"> <span class="small">1/nm</span></div>
+      <div class="row"><span style="flex:1"></span><button id="calAskCancel">Cancel</button> <button class="primary" id="calAskOk">Set calibration</button></div>`);
+    const inp = $('calAskValue'); inp.focus(); inp.select();
+    const done = (ok) => {
+      const v = parseFloat(inp.value); closeModal();
+      if (ok && v > 0) {
+        const before = im.cal && im.cal.scale;
+        im.cal = { scale: v / len, source: 'manual', value: v, lengthPx: +len.toFixed(1), ok: true, unit: '1/nm', edited: true };
+        recomputeD(im); if (SET.autoAssign) autoAssign(im);
+        const change = before ? ` (${((im.cal.scale / before - 1) * 100).toFixed(1)}% from before)` : '';
+        toast(`Calibration set: ${v} 1/nm over ${len.toFixed(1)} px${change}. Every d-spacing is updated.`);
+      } else if (ok) toast('Calibration unchanged: the length must be a positive number.');
+      setTool('select'); renderAll();
+    };
+    $('calAskOk').onclick = () => done(true); $('calAskCancel').onclick = () => done(false);
+    inp.onkeydown = (ev) => { if (ev.key === 'Enter') done(true); else if (ev.key === 'Escape') done(false); };
+  }
   function closeModal() { $('modalBg').style.display = 'none'; $('modal').onclick = null; }
   $('modalBg').addEventListener('mousedown', (ev) => { if (ev.target === $('modalBg')) closeModal(); });
   function help() {
@@ -716,9 +738,8 @@
       calibClicks.push(p);
       if (calibClicks.length === 1) { ov.insertAdjacentHTML('beforeend', `<circle cx="${p.x}" cy="${p.y}" r="${6 / S.view.z}" fill="#5aa9ff"/>`); return; }
       const [a, b] = calibClicks; const len = Math.hypot(a.x - b.x, a.y - b.y); calibClicks = [];
-      const v = parseFloat(prompt(`Length clicked: ${len.toFixed(1)} px.\nWhat is this length in 1/nm?`, im.sb && im.sb.value ? im.sb.value : '5'));
-      if (v > 0) { im.cal = { scale: v / len, source: 'manual', value: v, lengthPx: +len.toFixed(1), ok: true, unit: '1/nm' }; recomputeD(im); if (SET.autoAssign) autoAssign(im); }
-      setTool('select'); renderAll();
+      ov.insertAdjacentHTML('beforeend', `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#5aa9ff" stroke-width="${2 / S.view.z}"/><circle cx="${b.x}" cy="${b.y}" r="${6 / S.view.z}" fill="#5aa9ff"/>`);
+      askCalibLength(im, len);
     }
   });
   window.addEventListener('mousemove', (ev) => {
@@ -998,7 +1019,7 @@
   $('btnCenterMark').onclick = () => { SET.style.showCenter = !SET.style.showCenter; $('btnCenterMark').classList.toggle('on', SET.style.showCenter); saveSettings(); renderOverlay(); };
   $('btnCenterMark').classList.toggle('on', SET.style.showCenter);
   $('rngGamma').oninput = () => { S.gamma = parseFloat($('rngGamma').value); paintImage(); };
-  $('rngMax').oninput = () => { S.white = parseFloat($('rngMax').value); paintImage(); };
+  $('rngMax').oninput = () => { S.white = 275 - parseFloat($('rngMax').value); paintImage(); }; // right = brighter: the slider runs from white level 255 down to 20
   $('selPreset').onchange = () => { const im = S.images[S.cur]; if (!im) return; im.preset = $('selPreset').value; reanalyse(im, im.centerMethod === 'manual' ? im.center : null); };
   $('selExport').onchange = () => { const v = $('selExport').value; $('selExport').value = ''; if (v) doExport(v); };
   $('btnCopy').onclick = copyImage;
