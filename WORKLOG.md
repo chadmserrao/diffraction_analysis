@@ -280,6 +280,14 @@ Logan (2026-11-05) and Linda (2026-11-09) reviewed `a2cb5ba` for round 5. What c
 - **Check-in:** [docs/check-in.md](docs/check-in.md) describes where the capstone stands against the plan (`PROMPT.md`) at `3ec021f`: what works, the planted defect that the sample tests missed, what is cut (the walkthrough, most of M6's defaults, splitting `analyze`), and what is thrown away and what is kept.
 - **Re-checked at `3ec021f`:** `make check`, `make test` and the Au standard's d-spacings, which are quoted in the check-in. The Au {111} ring is still missed (plan check 4).
 
+## 2026-11-20: A referee that disagrees (8b)
+
+- **Referee:** [`.claude/agents/referee.md`](.claude/agents/referee.md), a read-only subagent whose one job is to prove a change wrong, with an input for every finding. I ran it in fresh `claude -p` sessions with only Read, Grep, Glob and git's read commands allowed. Notes, the setup table and both full reports are in [docs/referee/](docs/referee/notes.md).
+- **On the round-5 revisions** (`234b2df..44725cc`): six findings and five questions. The biggest: Auto-identify on an image with no marks re-ran detection and put a corrected scale bar back to the mis-read value. I saw it in the browser (5.5 went back to 5), fixed `reanalyse` to keep any calibration the user edited, and checked that 5.5 now stays. I also fixed the Contrast tooltip, which said the wrong direction.
+- **Negative control:** flipped one sign in `snapRing` in a throwaway worktree, under a harmless-sounding commit message. The referee's first finding was that exact line; `make test` failed on it too. The worktree and branch are deleted.
+- **Rejected:** limiting "+ Ring" to peaks the detector would accept. I measured that it does snap to small bumps away from any ring, but "+ Ring" exists to mark rings the detector misses (Au {111}).
+- **Checked:** `make verify` and `make bench BENCH_ARGS="--check bench/key.json"` both pass, so the analysis results are unchanged.
+
 ## Open items
 
 - [ ] Apply the slide conventions as defaults (items 1–6 above).
@@ -293,6 +301,9 @@ Logan (2026-11-05) and Linda (2026-11-09) reviewed `a2cb5ba` for round 5. What c
 - [ ] Split `analyze` in `imageproc.js` into one file per step once a step needs to change on its own (code review, 2026-10-20).
 - [ ] Update the capstone repository on the course companion: it still lists `tem-search-twin`.
 - [ ] Add expected d-spacings to `tests/sample_cases.json` once the ImageJ hand comparison is done (test review, Linda).
+- [ ] "+ Ring" message: say how far the ring moved when it snaps (referee, 2026-11-20).
+- [ ] Contract test: probe a "+ Ring" click between two rings, not only outside the profile (referee, 2026-11-20).
+- [ ] Colour by feature type: avoid repeating a shade when there are more than 8 ring labels (referee, 2026-11-20).
 - [x] ~~Add a short built-in walkthrough~~: cut in the check-in (2026-11-18); the hover hints and help stay. Colour by feature type is done (2026-11-09).
 
 ## How to rebuild and test
